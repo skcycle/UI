@@ -1,0 +1,56 @@
+{
+  "date": "2026-04-13",
+  "top": 10,
+  "backtest_targets": [
+    {
+      "ts_code": "600480.SH",
+      "mc": "凌云股份",
+      "total_score": 67.89
+    },
+    {
+      "ts_code": "300863.SZ",
+      "mc": "卡倍亿",
+      "total_score": 64.11
+    },
+    {
+      "ts_code": "301310.SZ",
+      "mc": "鑫宏业",
+      "total_score": 60.76
+    },
+    {
+      "ts_code": "603202.SH",
+      "mc": "天有为",
+      "total_score": 59.3
+    },
+    {
+      "ts_code": "605006.SH",
+      "mc": "山东玻纤",
+      "total_score": 58.64
+    },
+    {
+      "ts_code": "600545.SH",
+      "mc": "卓郎智能",
+      "total_score": 56.55
+    },
+    {
+      "ts_code": "002779.SZ",
+      "mc": "中坚科技",
+      "total_score": 55.35
+    },
+    {
+      "ts_code": "301005.SZ",
+      "mc": "超捷股份",
+      "total_score": 54.24
+    },
+    {
+      "ts_code": "003036.SZ",
+      "mc": "泰坦股份",
+      "total_score": 54.01
+    },
+    {
+      "ts_code": "002126.SZ",
+      "mc": "银轮股份",
+      "total_score": 54.0
+    }
+  ]
+}
