@@ -1,0 +1,798 @@
+{
+  "date": "2026-04-13",
+  "dimension": "kline_pattern",
+  "max_score": 15,
+  "lookback_trading_days": 20,
+  "items": [
+    {
+      "ts_code": "000690.SZ",
+      "raw": 7.5,
+      "score15": 15,
+      "tags": [
+        {
+          "tag": "big_bull",
+          "score": 2
+        },
+        {
+          "tag": "bullish_engulfing",
+          "score": 2.5
+        },
+        {
+          "tag": "morning_star",
+          "score": 3
+        }
+      ]
+    },
+    {
+      "ts_code": "301005.SZ",
+      "raw": 7.5,
+      "score15": 15,
+      "tags": [
+        {
+          "tag": "bullish_engulfing",
+          "score": 2.5
+        },
+        {
+          "tag": "piercing_line",
+          "score": 2
+        },
+        {
+          "tag": "morning_star",
+          "score": 3
+        }
+      ]
+    },
+    {
+      "ts_code": "600480.SH",
+      "raw": 7.5,
+      "score15": 15,
+      "tags": [
+        {
+          "tag": "trend_up_ma",
+          "score": 1
+        },
+        {
+          "tag": "close_breakout_20",
+          "score": 1.5
+        },
+        {
+          "tag": "big_bull",
+          "score": 2
+        },
+        {
+          "tag": "gap_up",
+          "score": 1
+        },
+        {
+          "tag": "three_white_soldiers",
+          "score": 2
+        }
+      ]
+    },
+    {
+      "ts_code": "301053.SZ",
+      "raw": 7,
+      "score15": 14.5,
+      "tags": [
+        {
+          "tag": "trend_up_ma",
+          "score": 1
+        },
+        {
+          "tag": "close_breakout_20",
+          "score": 1.5
+        },
+        {
+          "tag": "bullish_engulfing",
+          "score": 2.5
+        },
+        {
+          "tag": "piercing_line",
+          "score": 2
+        }
+      ]
+    },
+    {
+      "ts_code": "688312.SH",
+      "raw": 7,
+      "score15": 14.5,
+      "tags": [
+        {
+          "tag": "trend_up_ma",
+          "score": 1
+        },
+        {
+          "tag": "close_breakout_20",
+          "score": 1.5
+        },
+        {
+          "tag": "big_bull",
+          "score": 2
+        },
+        {
+          "tag": "bullish_engulfing",
+          "score": 2.5
+        }
+      ]
+    },
+    {
+      "ts_code": "000539.SZ",
+      "raw": 6.5,
+      "score15": 14,
+      "tags": [
+        {
+          "tag": "big_bull",
+          "score": 2
+        },
+        {
+          "tag": "bullish_engulfing",
+          "score": 2.5
+        },
+        {
+          "tag": "piercing_line",
+          "score": 2
+        }
+      ]
+    },
+    {
+      "ts_code": "000601.SZ",
+      "raw": 6.5,
+      "score15": 14,
+      "tags": [
+        {
+          "tag": "big_bull",
+          "score": 2
+        },
+        {
+          "tag": "bullish_engulfing",
+          "score": 2.5
+        },
+        {
+          "tag": "piercing_line",
+          "score": 2
+        }
+      ]
+    },
+    {
+      "ts_code": "000722.SZ",
+      "raw": 6.5,
+      "score15": 14,
+      "tags": [
+        {
+          "tag": "big_bull",
+          "score": 2
+        },
+        {
+          "tag": "bullish_engulfing",
+          "score": 2.5
+        },
+        {
+          "tag": "piercing_line",
+          "score": 2
+        }
+      ]
+    },
+    {
+      "ts_code": "000767.SZ",
+      "raw": 6.5,
+      "score15": 14,
+      "tags": [
+        {
+          "tag": "big_bull",
+          "score": 2
+        },
+        {
+          "tag": "bullish_engulfing",
+          "score": 2.5
+        },
+        {
+          "tag": "piercing_line",
+          "score": 2
+        }
+      ]
+    },
+    {
+      "ts_code": "002201.SZ",
+      "raw": 6.5,
+      "score15": 14,
+      "tags": [
+        {
+          "tag": "close_breakout_20",
+          "score": 1.5
+        },
+        {
+          "tag": "big_bull",
+          "score": 2
+        },
+        {
+          "tag": "morning_star",
+          "score": 3
+        }
+      ]
+    },
+    {
+      "ts_code": "002779.SZ",
+      "raw": 6.5,
+      "score15": 14,
+      "tags": [
+        {
+          "tag": "trend_up_ma",
+          "score": 1
+        },
+        {
+          "tag": "close_breakout_20",
+          "score": 1.5
+        },
+        {
+          "tag": "big_bull",
+          "score": 2
+        },
+        {
+          "tag": "three_white_soldiers",
+          "score": 2
+        }
+      ]
+    },
+    {
+      "ts_code": "300196.SZ",
+      "raw": 6.5,
+      "score15": 14,
+      "tags": [
+        {
+          "tag": "trend_up_ma",
+          "score": 1
+        },
+        {
+          "tag": "close_breakout_20",
+          "score": 1.5
+        },
+        {
+          "tag": "big_bull",
+          "score": 2
+        },
+        {
+          "tag": "three_white_soldiers",
+          "score": 2
+        }
+      ]
+    },
+    {
+      "ts_code": "300863.SZ",
+      "raw": 6.5,
+      "score15": 14,
+      "tags": [
+        {
+          "tag": "trend_up_ma",
+          "score": 1
+        },
+        {
+          "tag": "close_breakout_20",
+          "score": 1.5
+        },
+        {
+          "tag": "big_bull",
+          "score": 2
+        },
+        {
+          "tag": "three_white_soldiers",
+          "score": 2
+        }
+      ]
+    },
+    {
+      "ts_code": "600821.SH",
+      "raw": 6.5,
+      "score15": 14,
+      "tags": [
+        {
+          "tag": "big_bull",
+          "score": 2
+        },
+        {
+          "tag": "bullish_engulfing",
+          "score": 2.5
+        },
+        {
+          "tag": "piercing_line",
+          "score": 2
+        }
+      ]
+    },
+    {
+      "ts_code": "601016.SH",
+      "raw": 6.5,
+      "score15": 14,
+      "tags": [
+        {
+          "tag": "big_bull",
+          "score": 2
+        },
+        {
+          "tag": "bullish_engulfing",
+          "score": 2.5
+        },
+        {
+          "tag": "piercing_line",
+          "score": 2
+        }
+      ]
+    },
+    {
+      "ts_code": "688531.SH",
+      "raw": 6.5,
+      "score15": 14,
+      "tags": [
+        {
+          "tag": "trend_up_ma",
+          "score": 1
+        },
+        {
+          "tag": "close_breakout_20",
+          "score": 1.5
+        },
+        {
+          "tag": "big_bull",
+          "score": 2
+        },
+        {
+          "tag": "three_white_soldiers",
+          "score": 2
+        }
+      ]
+    },
+    {
+      "ts_code": "600163.SH",
+      "raw": 6,
+      "score15": 13.5,
+      "tags": [
+        {
+          "tag": "big_bull",
+          "score": 2
+        },
+        {
+          "tag": "gap_up",
+          "score": 1
+        },
+        {
+          "tag": "morning_star",
+          "score": 3
+        }
+      ]
+    },
+    {
+      "ts_code": "601619.SH",
+      "raw": 6,
+      "score15": 13.5,
+      "tags": [
+        {
+          "tag": "trend_up_ma",
+          "score": 1
+        },
+        {
+          "tag": "big_bull",
+          "score": 2
+        },
+        {
+          "tag": "gap_up",
+          "score": 1
+        },
+        {
+          "tag": "three_white_soldiers",
+          "score": 2
+        }
+      ]
+    },
+    {
+      "ts_code": "601778.SH",
+      "raw": 5.5,
+      "score15": 13,
+      "tags": [
+        {
+          "tag": "trend_up_ma",
+          "score": 1
+        },
+        {
+          "tag": "big_bull",
+          "score": 2
+        },
+        {
+          "tag": "bullish_engulfing",
+          "score": 2.5
+        }
+      ]
+    },
+    {
+      "ts_code": "002667.SZ",
+      "raw": 5,
+      "score15": 12.5,
+      "tags": [
+        {
+          "tag": "trend_up_ma",
+          "score": 1
+        },
+        {
+          "tag": "big_bull",
+          "score": 2
+        },
+        {
+          "tag": "three_white_soldiers",
+          "score": 2
+        }
+      ]
+    },
+    {
+      "ts_code": "002837.SZ",
+      "raw": 5,
+      "score15": 12.5,
+      "tags": [
+        {
+          "tag": "trend_up_ma",
+          "score": 1
+        },
+        {
+          "tag": "big_bull",
+          "score": 2
+        },
+        {
+          "tag": "three_white_soldiers",
+          "score": 2
+        }
+      ]
+    },
+    {
+      "ts_code": "300499.SZ",
+      "raw": 5,
+      "score15": 12.5,
+      "tags": [
+        {
+          "tag": "trend_up_ma",
+          "score": 1
+        },
+        {
+          "tag": "big_bull",
+          "score": 2
+        },
+        {
+          "tag": "three_white_soldiers",
+          "score": 2
+        }
+      ]
+    },
+    {
+      "ts_code": "600545.SH",
+      "raw": 5,
+      "score15": 12.5,
+      "tags": [
+        {
+          "tag": "trend_up_ma",
+          "score": 1
+        },
+        {
+          "tag": "big_bull",
+          "score": 2
+        },
+        {
+          "tag": "three_white_soldiers",
+          "score": 2
+        }
+      ]
+    },
+    {
+      "ts_code": "000155.SZ",
+      "raw": 4.5,
+      "score15": 12,
+      "tags": [
+        {
+          "tag": "trend_up_ma",
+          "score": 1
+        },
+        {
+          "tag": "close_breakout_20",
+          "score": 1.5
+        },
+        {
+          "tag": "big_bull",
+          "score": 2
+        }
+      ]
+    },
+    {
+      "ts_code": "002126.SZ",
+      "raw": 4.5,
+      "score15": 12,
+      "tags": [
+        {
+          "tag": "trend_up_ma",
+          "score": 1
+        },
+        {
+          "tag": "close_breakout_20",
+          "score": 1.5
+        },
+        {
+          "tag": "three_white_soldiers",
+          "score": 2
+        }
+      ]
+    },
+    {
+      "ts_code": "301310.SZ",
+      "raw": 4.5,
+      "score15": 12,
+      "tags": [
+        {
+          "tag": "trend_up_ma",
+          "score": 1
+        },
+        {
+          "tag": "close_breakout_20",
+          "score": 1.5
+        },
+        {
+          "tag": "three_white_soldiers",
+          "score": 2
+        }
+      ]
+    },
+    {
+      "ts_code": "603202.SH",
+      "raw": 4.5,
+      "score15": 12,
+      "tags": [
+        {
+          "tag": "trend_up_ma",
+          "score": 1
+        },
+        {
+          "tag": "close_breakout_20",
+          "score": 1.5
+        },
+        {
+          "tag": "big_bull",
+          "score": 2
+        }
+      ]
+    },
+    {
+      "ts_code": "603693.SH",
+      "raw": 4.5,
+      "score15": 12,
+      "tags": [
+        {
+          "tag": "big_bull",
+          "score": 2
+        },
+        {
+          "tag": "bullish_engulfing",
+          "score": 2.5
+        }
+      ]
+    },
+    {
+      "ts_code": "605006.SH",
+      "raw": 4.5,
+      "score15": 12,
+      "tags": [
+        {
+          "tag": "trend_up_ma",
+          "score": 1
+        },
+        {
+          "tag": "close_breakout_20",
+          "score": 1.5
+        },
+        {
+          "tag": "three_white_soldiers",
+          "score": 2
+        }
+      ]
+    },
+    {
+      "ts_code": "605319.SH",
+      "raw": 4.5,
+      "score15": 12,
+      "tags": [
+        {
+          "tag": "trend_up_ma",
+          "score": 1
+        },
+        {
+          "tag": "close_breakout_20",
+          "score": 1.5
+        },
+        {
+          "tag": "three_white_soldiers",
+          "score": 2
+        }
+      ]
+    },
+    {
+      "ts_code": "000993.SZ",
+      "raw": 4,
+      "score15": 11.5,
+      "tags": [
+        {
+          "tag": "gap_up",
+          "score": 1
+        },
+        {
+          "tag": "morning_star",
+          "score": 3
+        }
+      ]
+    },
+    {
+      "ts_code": "601112.SH",
+      "raw": 3,
+      "score15": 10.5,
+      "tags": [
+        {
+          "tag": "trend_up_ma",
+          "score": 1
+        },
+        {
+          "tag": "big_bull",
+          "score": 2
+        }
+      ]
+    },
+    {
+      "ts_code": "603319.SH",
+      "raw": 3,
+      "score15": 10.5,
+      "tags": [
+        {
+          "tag": "trend_up_ma",
+          "score": 1
+        },
+        {
+          "tag": "three_white_soldiers",
+          "score": 2
+        }
+      ]
+    },
+    {
+      "ts_code": "600726.SH",
+      "raw": 2.7,
+      "score15": 10.2,
+      "tags": [
+        {
+          "tag": "trend_down_ma",
+          "score": -1
+        },
+        {
+          "tag": "bullish_engulfing",
+          "score": 2.5
+        },
+        {
+          "tag": "tweezers_bottom",
+          "score": 1.2
+        }
+      ]
+    },
+    {
+      "ts_code": "603601.SH",
+      "raw": 2.3,
+      "score15": 9.8,
+      "tags": [
+        {
+          "tag": "trend_down_ma",
+          "score": -1
+        },
+        {
+          "tag": "bullish_engulfing",
+          "score": 2.5
+        },
+        {
+          "tag": "piercing_line",
+          "score": 2
+        },
+        {
+          "tag": "tweezers_top",
+          "score": -1.2
+        }
+      ]
+    },
+    {
+      "ts_code": "000862.SZ",
+      "raw": 2,
+      "score15": 9.5,
+      "tags": [
+        {
+          "tag": "big_bull",
+          "score": 2
+        }
+      ]
+    },
+    {
+      "ts_code": "001896.SZ",
+      "raw": 2,
+      "score15": 9.5,
+      "tags": [
+        {
+          "tag": "big_bull",
+          "score": 2
+        }
+      ]
+    },
+    {
+      "ts_code": "003036.SZ",
+      "raw": 2,
+      "score15": 9.5,
+      "tags": [
+        {
+          "tag": "three_white_soldiers",
+          "score": 2
+        }
+      ]
+    },
+    {
+      "ts_code": "301680.SZ",
+      "raw": 2,
+      "score15": 9.5,
+      "tags": [
+        {
+          "tag": "big_bull",
+          "score": 2
+        }
+      ]
+    },
+    {
+      "ts_code": "600310.SH",
+      "raw": 2,
+      "score15": 9.5,
+      "tags": [
+        {
+          "tag": "big_bull",
+          "score": 2
+        }
+      ]
+    },
+    {
+      "ts_code": "603698.SH",
+      "raw": 1.9,
+      "score15": 9.4,
+      "tags": [
+        {
+          "tag": "trend_up_ma",
+          "score": 1
+        },
+        {
+          "tag": "close_breakout_20",
+          "score": 1.5
+        },
+        {
+          "tag": "doji",
+          "score": -0.6
+        },
+        {
+          "tag": "long_legged_doji",
+          "score": -0.6
+        }
+      ]
+    },
+    {
+      "ts_code": "002190.SZ",
+      "raw": 1,
+      "score15": 8.5,
+      "tags": [
+        {
+          "tag": "trend_up_ma",
+          "score": 1
+        }
+      ]
+    },
+    {
+      "ts_code": "002256.SZ",
+      "raw": 0,
+      "score15": 7.5,
+      "tags": []
+    },
+    {
+      "ts_code": "002490.SZ",
+      "raw": 0,
+      "score15": 7.5,
+      "tags": []
+    }
+  ]
+}
