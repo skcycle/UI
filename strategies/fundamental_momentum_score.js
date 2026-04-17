@@ -146,15 +146,16 @@ async function fetchTushareFallback({ token, date, tsCodes }) {
     const dailyBasicJson = await postTushare({
       api_name: 'daily_basic',
       token,
-      params: { ts_code: chunk.join(','), trade_date: tradeDate },
+      params: { trade_date: tradeDate },
       fields: 'ts_code,trade_date,turnover_rate_f,turnover_rate',
     });
     if (!dailyBasicJson || dailyBasicJson.code !== 0) throw new Error(dailyBasicJson ? dailyBasicJson.msg : 'tushare daily_basic error');
     const basicData = dailyBasicJson.data || { fields: [], items: [] };
     const bIdx = Object.fromEntries((basicData.fields || []).map((f, idx) => [f, idx]));
+    const chunkSet = new Set(chunk);
     for (const row of (basicData.items || [])) {
       const ts = row[bIdx.ts_code];
-      if (!ts) continue;
+      if (!ts || !chunkSet.has(ts)) continue;
       const turnover = bIdx.turnover_rate_f != null && row[bIdx.turnover_rate_f] != null
         ? Number(row[bIdx.turnover_rate_f])
         : (bIdx.turnover_rate != null ? Number(row[bIdx.turnover_rate]) : NaN);
