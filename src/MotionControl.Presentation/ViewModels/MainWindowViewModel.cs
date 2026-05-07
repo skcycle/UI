@@ -31,7 +31,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IOperationStat
         Magazine,
         WorkHead,
         PositionSetup,
-        Alarm
+        Alarm,
+        EventLog
     }
     private readonly Machine _machine;
     private readonly IMotionAppService _motionAppService;
@@ -97,7 +98,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IOperationStat
         MagazineEventRuntimeState magazineEventRuntimeState,
         WorkHeadEventRuntimeState workHeadEventRuntimeState,
         PositionSetupEventRuntimeState positionSetupEventRuntimeState,
-        IoControlService ioControlService)
+        IoControlService ioControlService,
+        EventLogQueryService eventLogQueryService)
     {
         _machine = machine;
         _motionAppService = motionAppService;
@@ -135,6 +137,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IOperationStat
         IoMonitor = new IoMonitorViewModel(machine, ioControlService, commandFeedbackRuntimeState, CanWriteIoOutputs);
         IoEventLog = new IoEventLogViewModel(ioEventRuntimeState);
         CylinderEventLog = new CylinderEventLogViewModel(cylinderEventRuntimeState);
+        EventLogQuery = new RuntimeEventLogQueryViewModel(eventLogQueryService);
         MagazineEventLog = new MagazineEventLogViewModel(magazineEventRuntimeState);
         WorkHeadEventLog = new WorkHeadEventLogViewModel(workHeadEventRuntimeState);
         PositionSetupEventLog = new PositionSetupEventLogViewModel(positionSetupEventRuntimeState);
@@ -378,6 +381,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IOperationStat
         NavigationPage.WorkHead => "Work Head",
         NavigationPage.PositionSetup => "Position Setup",
         NavigationPage.Alarm => "Alarm Center",
+        NavigationPage.EventLog => "Event Log",
         _ => "Dashboard"
     };
 
@@ -391,6 +395,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IOperationStat
         NavigationPage.Magazine => "Magazine configuration, runtime state and layer parameter setup.",
         NavigationPage.WorkHead => "Work head objects, position management and vacuum IO setup.",
         NavigationPage.PositionSetup => "Reusable position objects, axis mapping and target values.",
+        NavigationPage.EventLog => "SQLite event history — filter by time, module, axis, level and object.",
         NavigationPage.Alarm => "Active alarms, severity overview and alarm investigation.",
         _ => "System overview, network health and recent events."
     };
@@ -453,6 +458,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IOperationStat
     public WorkHeadMonitorViewModel WorkHeadMonitor { get; }
     public PositionSetupMonitorViewModel PositionSetupMonitor { get; }
     public CylinderEventLogViewModel CylinderEventLog { get; }
+
+    public RuntimeEventLogQueryViewModel EventLogQuery { get; }
     public MagazineEventLogViewModel MagazineEventLog { get; }
     public WorkHeadEventLogViewModel WorkHeadEventLog { get; }
     public PositionSetupEventLogViewModel PositionSetupEventLog { get; }

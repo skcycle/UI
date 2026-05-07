@@ -216,6 +216,10 @@
                     <controls:AlarmPanel />
                 </TabItem>
 
+                <TabItem Header="Event Log">
+                    <controls:RuntimeEventLogPanel DataContext="{Binding EventLogQuery}" />
+                </TabItem>
+
             </TabControl>
         </Grid>
     </Grid>
