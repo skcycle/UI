@@ -6,7 +6,7 @@
              xmlns:controls="clr-namespace:MotionControl.App.Controls"
              xmlns:vm="clr-namespace:MotionControl.Presentation.ViewModels;assembly=MotionControl.Presentation"
              mc:Ignorable="d"
-             d:DesignHeight="600" d:DesignWidth="1000"
+             d:DesignHeight="700" d:DesignWidth="1100"
              d:DataContext="{d:DesignInstance Type=vm:RuntimeEventLogQueryViewModel}">
 
     <Grid Margin="0">
@@ -14,111 +14,265 @@
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
         <!-- Title -->
         <controls:PageHeader Grid.Row="0"
                              Title="Event Log"
-                             Hint="SQLite event history — filter by time, module, axis, level and object." />
+                             Hint="SQLite event history — filter, search, export and diagnose." />
 
-        <!-- Toolbar: filters + buttons -->
-        <Border Grid.Row="1" Style="{StaticResource SectionCardStyle}" Margin="0,8,0,8" Padding="12">
+        <!-- Quick filters row -->
+        <Border Grid.Row="1" Style="{StaticResource SectionCardStyle}" Margin="0,8,0,4" Padding="8,6">
+            <StackPanel Orientation="Horizontal">
+                <TextBlock Text="Quick:" VerticalAlignment="Center" Margin="0,0,8,0"
+                           Foreground="{StaticResource SecondaryTextBrush}" FontSize="12" />
+                <Button Content="Last 30 min" Command="{Binding Last30MinCommand}"
+                        Style="{StaticResource SecondaryButtonStyle}" FontSize="11" Padding="8,4" Margin="0,0,4,0" />
+                <Button Content="Last 1 hour" Command="{Binding Last1HourCommand}"
+                        Style="{StaticResource SecondaryButtonStyle}" FontSize="11" Padding="8,4" Margin="0,0,4,0" />
+                <Button Content="Last 24 hours" Command="{Binding Last24HourCommand}"
+                        Style="{StaticResource SecondaryButtonStyle}" FontSize="11" Padding="8,4" Margin="0,0,8,0" />
+                <Separator Margin="4,0" />
+                <Button Content="Only Errors" Command="{Binding OnlyErrorsCommand}"
+                        Style="{StaticResource DangerButtonStyle}" FontSize="11" Padding="8,4" Margin="0,0,4,0" />
+                <Button Content="Only Warnings" Command="{Binding OnlyWarningsCommand}"
+                        Style="{StaticResource WarningButtonStyle}" FontSize="11" Padding="8,4" Margin="0,0,8,0" />
+                <Separator Margin="4,0" />
+                <Button Content="Clear All Filters" Command="{Binding ClearFiltersCommand}"
+                        Style="{StaticResource SecondaryButtonStyle}" FontSize="11" Padding="8,4" />
+            </StackPanel>
+        </Border>
+
+        <!-- Main toolbar -->
+        <Border Grid.Row="2" Style="{StaticResource SectionCardStyle}" Margin="0,4,0,4" Padding="10,8">
             <WrapPanel>
-                <TextBlock Text="From:" VerticalAlignment="Center" Margin="0,0,4,0" />
-                <DatePicker SelectedDate="{Binding FromTime}" Width="140" Margin="0,0,12,0" />
+                <!-- Time range -->
+                <TextBlock Text="From:" VerticalAlignment="Center" Margin="0,0,4,0" FontSize="12" />
+                <DatePicker SelectedDate="{Binding FromTime}" Width="130" Margin="0,0,8,0" />
 
-                <TextBlock Text="To:" VerticalAlignment="Center" Margin="0,0,4,0" />
-                <DatePicker SelectedDate="{Binding ToTime}" Width="140" Margin="0,0,12,0" />
+                <TextBlock Text="To:" VerticalAlignment="Center" Margin="0,0,4,0" FontSize="12" />
+                <DatePicker SelectedDate="{Binding ToTime}" Width="130" Margin="0,0,12,0" />
 
-                <TextBlock Text="Module:" VerticalAlignment="Center" Margin="0,0,4,0" />
+                <!-- Module -->
+                <TextBlock Text="Module:" VerticalAlignment="Center" Margin="0,0,4,0" FontSize="12" />
                 <ComboBox ItemsSource="{Binding ModuleOptions}" SelectedItem="{Binding SelectedModule}"
-                          Width="120" Margin="0,0,12,0" />
+                          Width="120" Margin="0,0,8,0" IsEditable="False" />
 
-                <TextBlock Text="Level:" VerticalAlignment="Center" Margin="0,0,4,0" />
+                <!-- Level -->
+                <TextBlock Text="Level:" VerticalAlignment="Center" Margin="0,0,4,0" FontSize="12" />
                 <ComboBox ItemsSource="{Binding LevelOptions}" SelectedItem="{Binding SelectedLevel}"
-                          Width="80" Margin="0,0,12,0" />
+                          Width="80" Margin="0,0,8,0" />
 
-                <TextBlock Text="Axis:" VerticalAlignment="Center" Margin="0,0,4,0" />
+                <!-- Axis -->
+                <TextBlock Text="Axis:" VerticalAlignment="Center" Margin="0,0,4,0" FontSize="12" />
                 <ComboBox ItemsSource="{Binding AxisOptions}" SelectedItem="{Binding SelectedAxisNo}"
-                          Width="60" Margin="0,0,12,0" />
+                          Width="55" Margin="0,0,8,0" />
 
-                <TextBlock Text="Object:" VerticalAlignment="Center" Margin="0,0,4,0" />
+                <!-- Object name (fuzzy) -->
+                <TextBlock Text="Object:" VerticalAlignment="Center" Margin="0,0,4,0" FontSize="12" />
                 <TextBox Text="{Binding SelectedObjectName, UpdateSourceTrigger=PropertyChanged}"
-                         Width="100" Margin="0,0,12,0" />
+                         Width="90" Margin="0,0,8,0" />
 
-                <Button Content="Search" Command="{Binding SearchCommand}" Width="70" Margin="0,0,8,0"
-                        Style="{StaticResource SuccessButtonStyle}" />
-                <Button Content="Recent" Command="{Binding LoadRecentCommand}" Width="60" Margin="0,0,8,0"
-                        Style="{StaticResource SecondaryButtonStyle}" />
-                <Button Content="Clear" Command="{Binding ClearCommand}" Width="50"
-                        Style="{StaticResource SecondaryButtonStyle}" />
+                <!-- Status -->
+                <TextBlock Text="Status:" VerticalAlignment="Center" Margin="0,0,4,0" FontSize="12" />
+                <TextBox Text="{Binding SelectedStatus, UpdateSourceTrigger=PropertyChanged}"
+                         Width="80" Margin="0,0,12,0" />
+
+                <!-- Action buttons -->
+                <Button Content="Search" Command="{Binding SearchCommand}"
+                        Style="{StaticResource SuccessButtonStyle}" Width="70" Margin="0,0,4,0"
+                        IsEnabled="{Binding IsLoading, Converter={StaticResource InverseBoolConverter}}" />
+                <Button Content="Cancel" Command="{Binding CancelCommand}"
+                        Style="{StaticResource SecondaryButtonStyle}" Width="60" Margin="0,0,4,0"
+                        IsEnabled="{Binding IsLoading}" />
+                <Button Content="Clear" Command="{Binding ClearCommand}"
+                        Style="{StaticResource SecondaryButtonStyle}" Width="50" Margin="0,0,4,0" />
             </WrapPanel>
         </Border>
 
-        <!-- Status bar (also shows loading) -->
-        <Border Grid.Row="2" Padding="8,4" Margin="0,0,0,4">
+        <!-- Action toolbar: export, copy, diagnostics -->
+        <Border Grid.Row="3" Padding="4,4" Margin="0,0,0,4">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto" />
                     <ColumnDefinition Width="*" />
                     <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
-                <TextBlock Grid.Column="0" Text="{Binding StatusText}"
-                           Foreground="{StaticResource SecondaryTextBrush}" />
-                <TextBlock Grid.Column="2" Text="{Binding QueueStatus}"
-                           Foreground="{StaticResource AccentBrush}" FontSize="11"
-                           Margin="16,0,0,0" />
+
+                <!-- Left: export + copy -->
+                <StackPanel Grid.Column="0" Orientation="Horizontal">
+                    <Button Content="Export CSV" Command="{Binding ExportCsvCommand}"
+                            Style="{StaticResource SecondaryButtonStyle}" FontSize="11" Padding="8,4" Margin="0,0,4,0" />
+                    <Button Content="Export JSON" Command="{Binding ExportJsonCommand}"
+                            Style="{StaticResource SecondaryButtonStyle}" FontSize="11" Padding="8,4" Margin="0,0,4,0" />
+                    <Button Content="Copy Selected" Command="{Binding CopySelectedCommand}"
+                            Style="{StaticResource SecondaryButtonStyle}" FontSize="11" Padding="8,4" Margin="0,0,4,0"
+                            IsEnabled="{Binding HasSelectedEvent}" />
+                    <Separator Margin="6,0" />
+                    <Button Content="Test Write" Command="{Binding TestWriteCommand}"
+                            Style="{StaticResource SecondaryButtonStyle}" FontSize="11" Padding="8,4" Margin="0,0,4,0"
+                            ToolTip="Write a test entry to the event log" />
+                    <Button Content="Cleanup Old" Command="{Binding CleanupCommand}"
+                            Style="{StaticResource SecondaryButtonStyle}" FontSize="11" Padding="8,4"
+                            ToolTip="Delete entries older than retention period" />
+                </StackPanel>
+
+                <!-- Center: status -->
+                <TextBlock Grid.Column="1" Text="{Binding StatusText}"
+                           VerticalAlignment="Center" HorizontalAlignment="Center"
+                           Foreground="{StaticResource SecondaryTextBrush}" FontSize="12" />
+
+                <!-- Right: pagination -->
+                <StackPanel Grid.Column="2" Orientation="Horizontal"
+                            Visibility="{Binding HasPagination, Converter={StaticResource BooleanToVisibilityConverter}}">
+                    <Button Content="◀ Prev" Command="{Binding PrevPageCommand}"
+                            Style="{StaticResource SecondaryButtonStyle}" FontSize="11" Padding="6,3" Margin="0,0,4,0" />
+                    <TextBlock Text="{Binding PaginationText}" VerticalAlignment="Center"
+                               FontSize="11" Foreground="{StaticResource SecondaryTextBrush}" Margin="0,0,4,0" />
+                    <Button Content="Next ▶" Command="{Binding NextPageCommand}"
+                            Style="{StaticResource SecondaryButtonStyle}" FontSize="11" Padding="6,3" />
+                </StackPanel>
             </Grid>
         </Border>
 
         <!-- DataGrid -->
-        <DataGrid Grid.Row="3" ItemsSource="{Binding Events}"
+        <DataGrid Grid.Row="4"
+                  ItemsSource="{Binding Events}"
+                  SelectedItem="{Binding SelectedEvent}"
                   Style="{StaticResource SectionDataGridStyle}"
                   AutoGenerateColumns="False"
                   IsReadOnly="True"
                   SelectionMode="Single"
                   HeadersVisibility="Column"
                   GridLinesVisibility="Horizontal"
-                  AlternationCount="2">
+                  AlternationCount="2"
+                  CanUserSortColumns="True">
 
             <DataGrid.Columns>
-                <DataGridTextColumn Header="Time" Binding="{Binding TimestampLocal}" Width="160" />
-                <DataGridTextColumn Header="Module" Binding="{Binding Module}" Width="100" />
-                <DataGridTextColumn Header="Event" Binding="{Binding EventType}" Width="130" />
-                <DataGridTextColumn Header="Level" Binding="{Binding Level}" Width="70">
+                <DataGridTextColumn Header="Time" Binding="{Binding TimestampLocal}" Width="155" />
+                <DataGridTextColumn Header="Module" Binding="{Binding Module}" Width="95" />
+                <DataGridTextColumn Header="Event" Binding="{Binding EventType}" Width="120" />
+                <DataGridTextColumn Header="Level" Binding="{Binding Level}" Width="68">
                     <DataGridTextColumn.ElementStyle>
                         <Style TargetType="TextBlock">
-                            <Setter Property="Foreground"
-                                    Value="{StaticResource SecondaryTextBrush}" />
+                            <Setter Property="Foreground" Value="{StaticResource SecondaryTextBrush}" />
                             <Style.Triggers>
                                 <DataTrigger Binding="{Binding Level}" Value="Error">
-                                    <Setter Property="Foreground" Value="Red" />
+                                    <Setter Property="Foreground" Value="#DC143C" />
                                     <Setter Property="FontWeight" Value="Bold" />
                                 </DataTrigger>
                                 <DataTrigger Binding="{Binding Level}" Value="Warning">
                                     <Setter Property="Foreground" Value="Orange" />
+                                    <Setter Property="FontWeight" Value="SemiBold" />
                                 </DataTrigger>
                             </Style.Triggers>
                         </Style>
                     </DataGridTextColumn.ElementStyle>
                 </DataGridTextColumn>
-                <DataGridTextColumn Header="Axis" Binding="{Binding AxisNo}" Width="50" />
-                <DataGridTextColumn Header="Object" Binding="{Binding ObjectName}" Width="120" />
-                <DataGridTextColumn Header="I/O" Binding="{Binding IO}" Width="50" />
-                <DataGridTextColumn Header="Addr" Binding="{Binding Address}" Width="60" />
-                <DataGridTextColumn Header="Command" Binding="{Binding CommandName}" Width="130" />
-                <DataGridTextColumn Header="Status" Binding="{Binding Status}" Width="90" />
-                <DataGridTextColumn Header="Message" Binding="{Binding Message}" Width="*" MinWidth="150" />
+                <DataGridTextColumn Header="Axis" Binding="{Binding AxisNo}" Width="45" />
+                <DataGridTextColumn Header="Object" Binding="{Binding ObjectName}" Width="110" />
+                <DataGridTextColumn Header="I/O" Binding="{Binding IO}" Width="40" />
+                <DataGridTextColumn Header="Addr" Binding="{Binding Address}" Width="50" />
+                <DataGridTextColumn Header="Command" Binding="{Binding CommandName}" Width="115" />
+                <DataGridTextColumn Header="Status" Binding="{Binding Status}" Width="85" />
+                <DataGridTextColumn Header="Message (truncated)" Binding="{Binding Message}" Width="*" MinWidth="120" />
             </DataGrid.Columns>
+
+            <!-- Row styles: highlight Error/Warning rows -->
+            <DataGrid.RowStyle>
+                <Style TargetType="DataGridRow">
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding Level}" Value="Error">
+                            <Setter Property="Background" Value="#1FDC143C" />
+                            <Setter Property="Foreground" Value="#DC143C" />
+                        </DataTrigger>
+                        <DataTrigger Binding="{Binding Level}" Value="Warning">
+                            <Setter Property="Background" Value="#1Fffa500" />
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </DataGrid.RowStyle>
         </DataGrid>
 
-        <!-- Footer -->
-        <Border Grid.Row="4" Padding="4">
-            <TextBlock FontSize="11" Foreground="{StaticResource MutedTextBrush}">
-                <Run Text="{Binding Events.Count, Mode=OneWay}" /> <Run Text="rows" />
-            </TextBlock>
+        <!-- Selected row details panel -->
+        <Border Grid.Row="5"
+                Background="{StaticResource PanelBackgroundAltBrush}"
+                BorderBrush="{StaticResource PanelBorderBrush}"
+                BorderThickness="1"
+                CornerRadius="3"
+                Margin="0,4,0,0"
+                Padding="10,8"
+                Visibility="{Binding HasSelectedEvent, Converter={StaticResource BooleanToVisibilityConverter}}">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+
+                <!-- Detail header -->
+                <TextBlock Grid.Row="0" Grid.ColumnSpan="2" FontSize="11" FontWeight="SemiBold"
+                           Foreground="{StaticResource SecondaryTextBrush}" Margin="0,0,0,6">
+                    <Run Text="Selected: " />
+                    <Run Text="{Binding SelectedEvent.TimestampLocal}" />
+                    <Run Text=" | " />
+                    <Run Text="{Binding SelectedEvent.Module}" />
+                    <Run Text=" | " />
+                    <Run Text="{Binding SelectedEvent.EventType}" />
+                    <Run Text=" | " />
+                    <Run Text="{Binding SelectedEvent.Level}" FontWeight="Bold" />
+                    <Run Text=" | Axis " />
+                    <Run Text="{Binding SelectedEvent.AxisNo}" />
+                </TextBlock>
+
+                <!-- Message + PayloadJson -->
+                <StackPanel Grid.Row="1" Grid.Column="0" Width="220" Margin="0,0,12,0">
+                    <TextBlock Text="Message:" FontSize="11" Foreground="{StaticResource MutedTextBrush}" />
+                    <TextBlock Text="{Binding SelectedEvent.Message}" FontSize="11" TextWrapping="Wrap"
+                               Margin="0,2,0,6" />
+                </StackPanel>
+
+                <StackPanel Grid.Row="1" Grid.Column="1">
+                    <TextBlock Text="PayloadJson:" FontSize="11" Foreground="{StaticResource MutedTextBrush}" />
+                    <TextBox Text="{Binding SelectedEventJson, Mode=OneWay}"
+                             FontFamily="Consolas" FontSize="10"
+                             IsReadOnly="True"
+                             TextWrapping="Wrap"
+                             MaxHeight="120"
+                             VerticalScrollBarVisibility="Auto"
+                             Background="Transparent"
+                             BorderThickness="0" />
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <!-- Footer: diagnostics -->
+        <Border Grid.Row="6" Padding="6,4" Margin="0,4,0,0">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <TextBlock Grid.Column="0" Text="{Binding DiagnosticsText}"
+                           FontSize="10" Foreground="{StaticResource MutedTextBrush}"
+                           VerticalAlignment="Center" />
+                <TextBlock Grid.Column="1" FontSize="10" Foreground="{StaticResource MutedTextBrush}"
+                           VerticalAlignment="Center">
+                    <Run Text="{Binding Events.Count, Mode=OneWay}" />
+                    <Run Text=" rows shown" />
+                    <Run Text=" | " />
+                    <Run Text="{Binding TotalRows, Mode=OneWay}" />
+                    <Run Text=" total" />
+                </TextBlock>
+            </Grid>
         </Border>
     </Grid>
 </UserControl>

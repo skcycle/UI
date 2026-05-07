@@ -46,6 +46,13 @@ public sealed class MagazineEventRuntimeState
             Level = RuntimeEventLogEntry.DetermineLevel(null, record.EventType),
             ObjectName = record.MagazineName,
             Message = record.Message,
+            PayloadJson = PayloadBuilder.Magazine(
+                record.SlotNo,
+                record.LayerIndex,
+                record.LayerCount,
+                record.LayerHeight,
+                record.SettlingMs,
+                record.ScanResult)
         });
     }
 }
@@ -56,4 +63,12 @@ public sealed class MagazineEventRecord
     public string MagazineName { get; init; } = string.Empty;
     public string EventType { get; init; } = string.Empty;
     public string Message { get; init; } = string.Empty;
+
+    // Optional structured fields for PayloadJson
+    public int SlotNo { get; init; }
+    public int LayerIndex { get; init; }
+    public int LayerCount { get; init; }
+    public double LayerHeight { get; init; }
+    public int SettlingMs { get; init; }
+    public string? ScanResult { get; init; }
 }

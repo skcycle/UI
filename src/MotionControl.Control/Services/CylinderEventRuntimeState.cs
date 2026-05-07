@@ -46,6 +46,15 @@ public sealed class CylinderEventRuntimeState
             Level = RuntimeEventLogEntry.DetermineLevel(null, record.EventType),
             ObjectName = record.CylinderName,
             Message = record.Message,
+            PayloadJson = PayloadBuilder.Serialize(new
+            {
+                cylinderName = record.CylinderName,
+                action = record.Action,
+                expectedState = record.ExpectedState,
+                actualState = record.ActualState,
+                durationMs = record.DurationMs,
+                errorCode = record.ErrorCode
+            })
         });
     }
 }
@@ -56,4 +65,11 @@ public sealed class CylinderEventRecord
     public string CylinderName { get; init; } = string.Empty;
     public string EventType { get; init; } = string.Empty;
     public string Message { get; init; } = string.Empty;
+
+    // Optional structured fields for PayloadJson
+    public string? Action { get; init; }
+    public string? ExpectedState { get; init; }
+    public string? ActualState { get; init; }
+    public int? DurationMs { get; init; }
+    public int? ErrorCode { get; init; }
 }

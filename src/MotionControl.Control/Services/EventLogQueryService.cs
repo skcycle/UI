@@ -7,7 +7,7 @@ namespace MotionControl.Control.Services;
 /// 事件日志查询服务。
 /// 封装对 SQLite 的查询，供 ViewModel / Dashboard 使用。
 /// </summary>
-public sealed class EventLogQueryService
+public sealed class EventLogQueryService : IEventLogStore
 {
     private readonly IEventLogStore _eventLogStore;
     private readonly ILogger<EventLogQueryService> _logger;
@@ -68,4 +68,16 @@ public sealed class EventLogQueryService
 
     public long DroppedCount => _eventLogStore.DroppedCount;
     public int PendingCount => _eventLogStore.PendingCount;
+    public string DatabasePath => _eventLogStore.DatabasePath;
+    public int RetentionDays => _eventLogStore.RetentionDays;
+
+    // ── IEventLogStore forwarders ──
+
+    public void Enqueue(RuntimeEventLogEntry entry) => _eventLogStore.Enqueue(entry);
+    public Task WarmupAsync(CancellationToken ct = default) => _eventLogStore.WarmupAsync(ct);
+    public Task<int> DeleteOlderThanAsync(DateTime cutoffUtc, CancellationToken ct = default) => _eventLogStore.DeleteOlderThanAsync(cutoffUtc, ct);
+    public Task FlushAsync(CancellationToken ct = default) => _eventLogStore.FlushAsync(ct);
+    public Task<IReadOnlyList<string>> GetDistinctModulesAsync(CancellationToken ct = default) => _eventLogStore.GetDistinctModulesAsync(ct);
+    public void EnqueueTestEntry(string module, string eventType, string level, string? message = null) => _eventLogStore.EnqueueTestEntry(module, eventType, level, message);
+    public Task ClearAllAsync(CancellationToken ct = default) => _eventLogStore.ClearAllAsync(ct);
 }

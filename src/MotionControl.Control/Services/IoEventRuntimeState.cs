@@ -49,6 +49,13 @@ public sealed class IoEventRuntimeState
             IsOutput = record.IsOutput,
             BoolValue = record.Value,
             Message = record.Message,
+            PayloadJson = PayloadBuilder.IO(
+                record.Address,
+                record.IsOutput,
+                record.ExpectedValue,
+                record.Value,
+                record.Source,
+                record.DurationMs)
         });
     }
 }
@@ -61,4 +68,9 @@ public sealed class IoEventRecord
     public bool IsOutput { get; init; }
     public bool Value { get; init; }
     public string Message { get; init; } = string.Empty;
+
+    // Optional structured fields for PayloadJson
+    public bool ExpectedValue { get; init; }
+    public string? Source { get; init; }
+    public int? DurationMs { get; init; }
 }

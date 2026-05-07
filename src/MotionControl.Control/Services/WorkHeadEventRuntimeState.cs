@@ -46,6 +46,16 @@ public sealed class WorkHeadEventRuntimeState
             Level = RuntimeEventLogEntry.DetermineLevel(null, record.EventType),
             ObjectName = record.WorkHeadName,
             Message = record.Message,
+            PayloadJson = PayloadBuilder.WorkHead(
+                record.Action,
+                record.WorkHeadName,
+                record.TargetX,
+                record.TargetY,
+                record.TargetZ,
+                record.TargetR,
+                record.Velocity,
+                result: record.Result,
+                record.DurationMs)
         });
     }
 }
@@ -56,6 +66,16 @@ public sealed class WorkHeadEventRecord
     public string WorkHeadName { get; init; } = string.Empty;
     public string EventType { get; init; } = string.Empty;
     public string Message { get; init; } = string.Empty;
+
+    // Optional structured fields for PayloadJson
+    public string Action { get; init; } = string.Empty;
+    public double? TargetX { get; init; }
+    public double? TargetY { get; init; }
+    public double? TargetZ { get; init; }
+    public double? TargetR { get; init; }
+    public double? Velocity { get; init; }
+    public string? Result { get; init; }
+    public int? DurationMs { get; init; }
 }
 
 public sealed class PositionSetupEventRuntimeState
@@ -104,6 +124,12 @@ public sealed class PositionSetupEventRuntimeState
             Level = RuntimeEventLogEntry.DetermineLevel(null, record.EventType),
             ObjectName = record.PositionName,
             Message = record.Message,
+            PayloadJson = PayloadBuilder.PositionSetup(
+                record.SetupItem,
+                record.PositionName,
+                record.Stage,
+                record.FailedAxis,
+                record.ErrorMessage)
         });
     }
 }
@@ -114,4 +140,10 @@ public sealed class PositionSetupEventRecord
     public string PositionName { get; init; } = string.Empty;
     public string EventType { get; init; } = string.Empty;
     public string Message { get; init; } = string.Empty;
+
+    // Optional structured fields for PayloadJson
+    public string SetupItem { get; init; } = string.Empty;
+    public string Stage { get; init; } = string.Empty;
+    public int? FailedAxis { get; init; }
+    public string? ErrorMessage { get; init; }
 }

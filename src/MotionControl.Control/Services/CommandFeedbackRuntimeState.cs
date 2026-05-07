@@ -66,10 +66,16 @@ public sealed class CommandFeedbackRuntimeState
             Module = "AxisCommand",
             EventType = feedback.Status,
             Level = RuntimeEventLogEntry.DetermineLevel(feedback.Status, feedback.CommandName),
-            AxisNo = feedback.AxisNo,
+            AxisNo = feedback.AxisNo ?? 0,
             CommandName = feedback.CommandName,
             Status = feedback.Status,
             Message = feedback.Message,
+            PayloadJson = PayloadBuilder.AxisCommand(
+                feedback.CommandName,
+                feedback.AxisNo ?? 0,
+                targetPosition: null,
+                velocity: null,
+                feedback.Status)
         });
     }
 

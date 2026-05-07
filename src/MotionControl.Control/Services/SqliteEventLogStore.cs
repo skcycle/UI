@@ -24,7 +24,7 @@ namespace MotionControl.Control.Services;
 /// </summary>
 public sealed class SqliteEventLogStore : IEventLogStore, IDisposable
 {
-    private const int RetentionDays = 30;
+    private const int DefaultRetentionDays = 30;
     private const int ChannelCapacity = 10000;
     private const int BatchWriteSize = 100;
     private const int BatchWriteIntervalMs = 200;
@@ -32,6 +32,7 @@ public sealed class SqliteEventLogStore : IEventLogStore, IDisposable
 
     private readonly Channel<RuntimeEventLogEntry> _channel;
     private readonly string _connectionString;
+    private readonly string _dbPath;
     private readonly ILogger<SqliteEventLogStore> _logger;
     private readonly CancellationTokenSource _cts = new();
     private readonly Task _consumerTask;
@@ -42,10 +43,13 @@ public sealed class SqliteEventLogStore : IEventLogStore, IDisposable
 
     public long DroppedCount => Interlocked.Read(ref _droppedCount);
     public int PendingCount => _pendingCount;
+    public string DatabasePath => _dbPath;
+    public int RetentionDays => DefaultRetentionDays;
 
     public SqliteEventLogStore(string dbPath, ILogger<SqliteEventLogStore>? logger = null)
     {
         _logger = logger ?? NullLogger<SqliteEventLogStore>.Instance;
+        _dbPath = dbPath;
         _connectionString = $"Data Source={dbPath}";
 
         InitDatabase();
@@ -104,7 +108,7 @@ public sealed class SqliteEventLogStore : IEventLogStore, IDisposable
 
         _logger.LogInformation("SQLite event log store initialized at {Path}", _connectionString);
 
-        var cutoff = DateTime.UtcNow.AddDays(-RetentionDays);
+        var cutoff = DateTime.UtcNow.AddDays(-DefaultRetentionDays);
         var deleteCmd = conn.CreateCommand();
         deleteCmd.CommandText = "DELETE FROM runtime_events WHERE ts_utc < @cutoff";
         deleteCmd.Parameters.AddWithValue("@cutoff", cutoff.ToString("O"));
@@ -360,6 +364,55 @@ public sealed class SqliteEventLogStore : IEventLogStore, IDisposable
         var deleted = await cmd.ExecuteNonQueryAsync(ct);
         _logger.LogInformation("Deleted {Count} old event records (cutoff={Cutoff:O})", deleted, cutoffUtc);
         return deleted;
+    }
+
+    public async Task<IReadOnlyList<string>> GetDistinctModulesAsync(CancellationToken ct = default)
+    {
+        await using var conn = new SqliteConnection(_connectionString);
+        await conn.OpenAsync(ct);
+
+        var cmd = conn.CreateCommand();
+        cmd.CommandText = "SELECT DISTINCT module FROM runtime_events ORDER BY module";
+
+        var modules = new List<string>();
+        await using var reader = await cmd.ExecuteReaderAsync(ct);
+        while (await reader.ReadAsync(ct))
+        {
+            modules.Add(reader.GetString(0));
+        }
+        return modules;
+    }
+
+    public async Task WarmupAsync(CancellationToken ct = default)
+    {
+        await using var conn = new SqliteConnection(_connectionString);
+        await conn.OpenAsync(ct);
+        await using var cmd = conn.CreateCommand();
+        cmd.CommandText = "SELECT COUNT(*) FROM runtime_events";
+        _ = await cmd.ExecuteScalarAsync(ct);
+        _logger.LogInformation("SQLite event log warmup complete");
+    }
+
+    public void EnqueueTestEntry(string module, string eventType, string level, string? message = null)
+    {
+        Enqueue(new RuntimeEventLogEntry
+        {
+            Module = module,
+            EventType = eventType,
+            Level = level,
+            Message = message ?? $"Test entry from {module}",
+            TimestampUtc = DateTime.UtcNow
+        });
+    }
+
+    public async Task ClearAllAsync(CancellationToken ct = default)
+    {
+        await using var conn = new SqliteConnection(_connectionString);
+        await conn.OpenAsync(ct);
+        var cmd = conn.CreateCommand();
+        cmd.CommandText = "DELETE FROM runtime_events";
+        var deleted = await cmd.ExecuteNonQueryAsync(ct);
+        _logger.LogWarning("Cleared all {Count} event log entries (diagnostic operation)", deleted);
     }
 
     private static async Task<IReadOnlyList<RuntimeEventLogEntry>> ReadEntriesAsync(SqliteCommand cmd, CancellationToken ct)
