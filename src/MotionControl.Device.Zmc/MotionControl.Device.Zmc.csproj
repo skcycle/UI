@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="8.0.0" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="../MotionControl.Device.Abstractions/MotionControl.Device.Abstractions.csproj" />
+    <ProjectReference Include="../MotionControl.Domain/MotionControl.Domain.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="../../vendor/zmc-sdk/zauxdll.dll">
+      <Link>zauxdll.dll</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="../../vendor/zmc-sdk/zmotion.dll">
+      <Link>zmotion.dll</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="../../vendor/zmc-sdk/zmotiondll.ini">
+      <Link>zmotiondll.ini</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+</Project>

@@ -1,0 +1,146 @@
+<UserControl x:Class="MotionControl.App.Controls.IoMonitorPanel"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:controls="clr-namespace:MotionControl.App.Controls"
+             mc:Ignorable="d"
+             d:DesignHeight="450" d:DesignWidth="800">
+    <Grid Margin="0">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="16" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="16" />
+            <RowDefinition Height="220" />
+        </Grid.RowDefinitions>
+
+        <!-- ── Page Header ─────────────────────────────────────────── -->
+        <controls:PageHeader Grid.Row="0">
+            <controls:PageHeader.Commands>
+                <WrapPanel>
+                    <Button Content="Add DI"    Command="{Binding AddInputCommand}"    Margin="0,0,8,0" Style="{StaticResource SecondaryButtonStyle}" />
+                    <Button Content="Delete DI" Command="{Binding DeleteInputCommand}" Margin="0,0,8,0" Style="{StaticResource DangerButtonStyle}" />
+                    <Button Content="Add DO"    Command="{Binding AddOutputCommand}"   Margin="0,0,8,0" Style="{StaticResource SecondaryButtonStyle}" />
+                    <Button Content="Delete DO" Command="{Binding DeleteOutputCommand}" Margin="0,0,8,0" Style="{StaticResource DangerButtonStyle}" />
+                    <Button Content="Save"      Command="{Binding SaveIoConfigCommand}" Margin="0,0,8,0" Style="{StaticResource SuccessButtonStyle}" />
+                    <Button Content="Load"      Command="{Binding LoadIoConfigCommand}"  Style="{StaticResource SecondaryButtonStyle}" />
+                </WrapPanel>
+            </controls:PageHeader.Commands>
+        </controls:PageHeader>
+
+        <!-- ── Two-Column IO Grid ─────────────────────────────────── -->
+        <Grid Grid.Row="2">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="16" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+
+            <!-- Digital Inputs -->
+            <Border Grid.Column="0" Style="{StaticResource SectionCardStyle}">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
+                    <TextBlock Text="Digital Inputs" Style="{StaticResource SectionTitleTextStyle}" />
+                    <TextBlock Grid.Row="1" Text="Input points, addresses and live state" Style="{StaticResource SectionHintTextStyle}" />
+                    <DataGrid Grid.Row="2"
+                             ItemsSource="{Binding IoMonitor.Inputs}"
+                             SelectedItem="{Binding IoMonitor.SelectedInput, Mode=TwoWay}"
+                             AutoGenerateColumns="False"
+                             IsReadOnly="False"
+                             Style="{StaticResource SectionDataGridStyle}"
+                             GridLinesVisibility="Horizontal"
+                             VerticalGridLinesBrush="Transparent"
+                             HorizontalGridLinesBrush="#2B3A46"
+                             PreviewMouseWheel="SectionDataGrid_PreviewMouseWheel"
+                             VerticalAlignment="Stretch">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="Name"        Binding="{Binding Name, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Width="140" />
+                            <DataGridTextColumn Header="Address"    Binding="{Binding Address, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Width="90" />
+                            <DataGridTextColumn Header="Type"       Binding="{Binding Direction}"  Width="80" IsReadOnly="True" />
+                            <DataGridTextColumn Header="Description" Binding="{Binding Description, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Width="*" />
+                            <DataGridTemplateColumn Header="State" Width="56">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <Ellipse Width="14" Height="14" Fill="{Binding StatusBrush}" Stroke="#404040" StrokeThickness="1" HorizontalAlignment="Center" />
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+                        </DataGrid.Columns>
+                    </DataGrid>
+                </Grid>
+            </Border>
+
+            <!-- Digital Outputs -->
+            <Border Grid.Column="2" Style="{StaticResource SectionCardStyle}">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
+                    <TextBlock Text="Digital Outputs" Style="{StaticResource SectionTitleTextStyle}" />
+                    <TextBlock Grid.Row="1" Text="Output points, addresses and quick toggle operation" Style="{StaticResource SectionHintTextStyle}" />
+                    <DataGrid Grid.Row="2"
+                             ItemsSource="{Binding IoMonitor.Outputs}"
+                             SelectedItem="{Binding IoMonitor.SelectedOutput, Mode=TwoWay}"
+                             AutoGenerateColumns="False"
+                             IsReadOnly="False"
+                             Style="{StaticResource SectionDataGridStyle}"
+                             GridLinesVisibility="Horizontal"
+                             VerticalGridLinesBrush="Transparent"
+                             HorizontalGridLinesBrush="#2B3A46"
+                             PreviewMouseWheel="SectionDataGrid_PreviewMouseWheel"
+                             VerticalAlignment="Stretch">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="Name"        Binding="{Binding Name, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Width="140" />
+                            <DataGridTextColumn Header="Address"    Binding="{Binding Address, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Width="90" />
+                            <DataGridTextColumn Header="Type"       Binding="{Binding Direction}"  Width="80" IsReadOnly="True" />
+                            <DataGridTextColumn Header="Description" Binding="{Binding Description, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Width="*" />
+                            <DataGridTemplateColumn Header="State" Width="56">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <Ellipse Width="14" Height="14" Fill="{Binding StatusBrush}" Stroke="#404040" StrokeThickness="1" HorizontalAlignment="Center" />
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+                            <DataGridTemplateColumn Header="Action" Width="68">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <Button Content="Toggle" Command="{Binding SetCommand}"
+                                                Width="52" MinWidth="52" MinHeight="26"
+                                                Padding="2,1" Margin="0"
+                                                Style="{StaticResource SecondaryButtonStyle}"
+                                                HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+                        </DataGrid.Columns>
+                    </DataGrid>
+                </Grid>
+            </Border>
+        </Grid>
+
+        <!-- ── Event Log ───────────────────────────────────────────── -->
+        <controls:EventLogPanel Grid.Row="4"
+                                Title="IO Event Log"
+                                Hint="Recent IO changes and runtime event records">
+            <DataGrid ItemsSource="{Binding IoEventLog.Events}"
+                      Style="{StaticResource SectionDataGridStyle}"
+                      PreviewMouseWheel="SectionDataGrid_PreviewMouseWheel">
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="Time"     Binding="{Binding Time}"          Width="110" />
+                    <DataGridTextColumn Header="Point"   Binding="{Binding Direction}"     Width="120" />
+                    <DataGridTextColumn Header="Address" Binding="{Binding Address}"       Width="120" />
+                    <DataGridTextColumn Header="State"   Binding="{Binding State}"        Width="120" />
+                    <DataGridTextColumn Header="Message" Binding="{Binding Description}"   Width="*" />
+                </DataGrid.Columns>
+            </DataGrid>
+        </controls:EventLogPanel>
+
+    </Grid>
+</UserControl>

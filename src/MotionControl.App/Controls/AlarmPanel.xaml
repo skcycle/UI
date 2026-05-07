@@ -1,0 +1,44 @@
+<UserControl x:Class="MotionControl.App.Controls.AlarmPanel"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:controls="clr-namespace:MotionControl.App.Controls"
+             mc:Ignorable="d"
+             d:DesignHeight="450" d:DesignWidth="800">
+    <Grid Margin="0">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="16" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <!-- ── Page Header ─────────────────────────────────────────── -->
+        <controls:PageHeader Title="Alarm Center"
+                             Hint="Active alarms, severity overview and alarm investigation"
+                             Grid.Row="0" />
+
+        <!-- ── Alarm Content ─────────────────────────────────────── -->
+        <Border Grid.Row="2" Style="{StaticResource SectionCardStyle}">
+            <StackPanel>
+                <ListBox ItemsSource="{Binding Alarm.ActiveAlarmAxes}"
+                         Margin="0,0,0,14" />
+                <DataGrid ItemsSource="{Binding Alarm.ActiveAlarms}"
+                          AutoGenerateColumns="False"
+                          IsReadOnly="True"
+                          controls:ScrollHelper.EnableScrollOnDataGrid="True">
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Header="Code"        Binding="{Binding Code}"        Width="120" />
+                        <DataGridTextColumn Header="Message"    Binding="{Binding Message}"      Width="220" />
+                        <DataGridTextColumn Header="Source"     Binding="{Binding Source}"       Width="120" />
+                        <DataGridTextColumn Header="Category"   Binding="{Binding Category}"     Width="120" />
+                        <DataGridTextColumn Header="Severity"  Binding="{Binding Severity}"     Width="100" />
+                        <DataGridTextColumn Header="Occurred At" Binding="{Binding OccurredAt}" Width="180" />
+                        <DataGridCheckBoxColumn Header="Active" Binding="{Binding IsActive, Mode=OneWay}" Width="80" />
+                    </DataGrid.Columns>
+                </DataGrid>
+            </StackPanel>
+        </Border>
+
+    </Grid>
+</UserControl>

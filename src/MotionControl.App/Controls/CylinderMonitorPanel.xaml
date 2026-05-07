@@ -1,0 +1,133 @@
+<UserControl x:Class="MotionControl.App.Controls.CylinderMonitorPanel"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:controls="clr-namespace:MotionControl.App.Controls"
+             mc:Ignorable="d"
+             d:DesignHeight="450" d:DesignWidth="800">
+    <Grid Margin="0">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="16" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="16" />
+            <RowDefinition Height="220" />
+        </Grid.RowDefinitions>
+
+        <!-- ── Page Header ─────────────────────────────────────────── -->
+        <controls:PageHeader Grid.Row="0">
+            <controls:PageHeader.Commands>
+                <WrapPanel>
+                    <Button Content="Add Cylinder"    Command="{Binding AddCylinderCommand}"    Margin="0,0,8,0" MinWidth="124" />
+                    <Button Content="Delete Cylinder" Command="{Binding DeleteCylinderCommand}" Margin="0,0,8,0" MinWidth="124" Style="{StaticResource DangerButtonStyle}" />
+                    <Button Content="Save"            Command="{Binding SaveCylinderConfigCommand}" Margin="0,0,8,0" MinWidth="124" Style="{StaticResource SuccessButtonStyle}" />
+                    <Button Content="Load"            Command="{Binding LoadCylinderConfigCommand}" MinWidth="124" Style="{StaticResource SecondaryButtonStyle}" />
+                </WrapPanel>
+            </controls:PageHeader.Commands>
+        </controls:PageHeader>
+
+        <!-- ── Cylinder DataGrid ──────────────────────────────────── -->
+        <Border Grid.Row="2" Style="{StaticResource SectionCardStyle}">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                </Grid.RowDefinitions>
+                <TextBlock Text="Cylinder Objects" Style="{StaticResource SectionTitleTextStyle}" />
+                <TextBlock Grid.Row="1" Text="Cylinder configuration, IO mapping and runtime state" Style="{StaticResource SectionHintTextStyle}" />
+                <DataGrid Grid.Row="2"
+                          ItemsSource="{Binding CylinderMonitor.Cylinders}"
+                          SelectedItem="{Binding CylinderMonitor.SelectedCylinder, Mode=TwoWay}"
+                          AutoGenerateColumns="False"
+                          CanUserAddRows="False"
+                          IsReadOnly="False"
+                          VerticalContentAlignment="Center"
+                          Style="{StaticResource SectionDataGridStyle}"
+                          GridLinesVisibility="Horizontal"
+                          VerticalGridLinesBrush="Transparent"
+                          HorizontalGridLinesBrush="#2B3A46"
+                          PreviewMouseWheel="SectionDataGrid_PreviewMouseWheel">
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Header="Name"     Binding="{Binding Name, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Width="160" />
+                        <DataGridTextColumn Header="Description" Binding="{Binding Description, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Width="190" />
+                        <DataGridTemplateColumn Header="Extend DI" Width="108">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <controls:StatusLightTextBox StatusBrush="{Binding ExtendDiBrush}"
+                                                                Text="{Binding ExtendSensorInputAddress, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+                        <DataGridTemplateColumn Header="Retract DI" Width="112">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <controls:StatusLightTextBox StatusBrush="{Binding RetractDiBrush}"
+                                                                Text="{Binding RetractSensorInputAddress, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+                        <DataGridTemplateColumn Header="Extend DO" Width="110">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <controls:StatusLightTextBox StatusBrush="{Binding ExtendDoBrush}"
+                                                                Text="{Binding ExtendOutputAddress, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+                        <DataGridTemplateColumn Header="Retract DO" Width="114">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <controls:StatusLightTextBox StatusBrush="{Binding RetractDoBrush}"
+                                                                Text="{Binding RetractOutputAddress, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+                        <DataGridTextColumn Header="Timeout" Binding="{Binding ActionTimeoutMs, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Width="88" />
+                        <DataGridTextColumn Header="State"  Binding="{Binding State}" Width="120" IsReadOnly="True" />
+                        <DataGridTemplateColumn Header="Extend" Width="110">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <Button Content="Ext" Command="{Binding OpenCommand}"
+                                            Style="{StaticResource SecondaryButtonStyle}"
+                                            FontSize="10" Padding="10,3"
+                                            MinWidth="92" Height="26"
+                                            HorizontalAlignment="Center" ToolTip="Extend" />
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+                        <DataGridTemplateColumn Header="Retract" Width="110">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <Button Content="Ret" Command="{Binding CloseCommand}"
+                                            Style="{StaticResource SecondaryButtonStyle}"
+                                            FontSize="10" Padding="10,3"
+                                            MinWidth="92" Height="26"
+                                            HorizontalAlignment="Center" ToolTip="Retract" />
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+                    </DataGrid.Columns>
+                </DataGrid>
+            </Grid>
+        </Border>
+
+        <!-- ── Event Log ───────────────────────────────────────────── -->
+        <controls:EventLogPanel Grid.Row="4"
+                                Title="Cylinder Event Log"
+                                Hint="Extend, retract and timeout runtime events">
+            <DataGrid ItemsSource="{Binding CylinderEventLog.Events}"
+                      Style="{StaticResource SectionDataGridStyle}"
+                      PreviewMouseWheel="SectionDataGrid_PreviewMouseWheel">
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="Time"     Binding="{Binding Time}"           Width="110" />
+                    <DataGridTextColumn Header="Cylinder" Binding="{Binding CylinderName}"  Width="180" />
+                    <DataGridTextColumn Header="Event"    Binding="{Binding EventType}"   Width="120" />
+                    <DataGridTextColumn Header="Message"  Binding="{Binding Description}"  Width="*" />
+                </DataGrid.Columns>
+            </DataGrid>
+        </controls:EventLogPanel>
+
+    </Grid>
+</UserControl>
