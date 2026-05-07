@@ -16,7 +16,9 @@ public sealed class SystemAppService(
     ISafetyController motionController,
     EmergencyStopService emergencyStopService,
     WatchdogService watchdog,
-    FaultRecoveryService faultRecoveryService) : ISystemAppService
+    FaultRecoveryService faultRecoveryService,
+    IEventLogStore eventLogStore,
+    EventLogQueryService eventLogQueryService) : ISystemAppService
 {
     public async Task InitializeAsync(CancellationToken cancellationToken = default)
     {
@@ -120,4 +122,11 @@ public sealed class SystemAppService(
     public EmergencyStopService GetEmergencyStopService() => emergencyStopService;
 
     public WatchdogService GetWatchdogService() => watchdog;
+
+    public EventLogQueryService GetEventLogQueryService() => eventLogQueryService;
+
+    public async Task FlushEventLogAsync(CancellationToken cancellationToken = default)
+    {
+        await eventLogStore.FlushAsync(cancellationToken);
+    }
 }

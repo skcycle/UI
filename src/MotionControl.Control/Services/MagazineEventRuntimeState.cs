@@ -43,7 +43,7 @@ public sealed class MagazineEventRuntimeState
             TimestampUtc = record.Timestamp,
             Module = "Magazine",
             EventType = record.EventType,
-            Level = "Info",
+            Level = RuntimeEventLogEntry.DetermineLevel(null, record.EventType),
             ObjectName = record.MagazineName,
             Message = record.Message,
         });

@@ -43,10 +43,7 @@ public sealed class CylinderEventRuntimeState
             TimestampUtc = record.Timestamp,
             Module = "Cylinder",
             EventType = record.EventType,
-            Level = record.EventType.Contains("FAIL", StringComparison.OrdinalIgnoreCase)
-                 || record.EventType.Contains("ERROR", StringComparison.OrdinalIgnoreCase)
-                 || record.EventType.Contains("ALARM", StringComparison.OrdinalIgnoreCase)
-                    ? "Error" : "Info",
+            Level = RuntimeEventLogEntry.DetermineLevel(null, record.EventType),
             ObjectName = record.CylinderName,
             Message = record.Message,
         });

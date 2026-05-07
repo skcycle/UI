@@ -1,0 +1,60 @@
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
+
+namespace MotionControl.Control.Services;
+
+/// <summary>
+/// 事件日志查询服务。
+/// 封装对 SQLite 的查询，供 ViewModel / Dashboard 使用。
+/// </summary>
+public sealed class EventLogQueryService
+{
+    private readonly IEventLogStore _eventLogStore;
+    private readonly ILogger<EventLogQueryService> _logger;
+
+    public EventLogQueryService(IEventLogStore eventLogStore, ILogger<EventLogQueryService>? logger = null)
+    {
+        _eventLogStore = eventLogStore;
+        _logger = logger ?? NullLogger<EventLogQueryService>.Instance;
+    }
+
+    /// <summary>最近 N 条事件</summary>
+    public Task<IReadOnlyList<RuntimeEventLogEntry>> QueryRecentAsync(int count = 200, CancellationToken ct = default)
+        => _eventLogStore.QueryRecentAsync(count, ct);
+
+    /// <summary>最近 N 秒内的 Error 事件</summary>
+    public Task<IReadOnlyList<RuntimeEventLogEntry>> QueryRecentErrorsAsync(int secondsBack = 300, CancellationToken ct = default)
+        => _eventLogStore.QueryAsync(
+            fromUtc: DateTime.UtcNow.AddSeconds(-secondsBack),
+            level: "Error",
+            ct: ct);
+
+    /// <summary>指定轴的报警事件</summary>
+    public Task<IReadOnlyList<RuntimeEventLogEntry>> QueryAxisAlarmsAsync(int axisNo, DateTime? fromUtc = null, CancellationToken ct = default)
+        => _eventLogStore.QueryAsync(
+            fromUtc: fromUtc,
+            axisNo: axisNo,
+            level: "Error",
+            ct: ct);
+
+    /// <summary>指定时间窗口内的操作记录</summary>
+    public Task<IReadOnlyList<RuntimeEventLogEntry>> QueryOperationsAsync(DateTime fromUtc, DateTime toUtc, int? axisNo = null, CancellationToken ct = default)
+        => _eventLogStore.QueryAsync(
+            fromUtc: fromUtc,
+            toUtc: toUtc,
+            module: "AxisCommand",
+            axisNo: axisNo,
+            ct: ct);
+
+    /// <summary>按模块查询</summary>
+    public Task<IReadOnlyList<RuntimeEventLogEntry>> QueryByModuleAsync(string module, DateTime? fromUtc = null, int count = 500, CancellationToken ct = default)
+        => _eventLogStore.QueryAsync(
+            fromUtc: fromUtc,
+            module: module,
+            ct: ct);
+
+    // ── 诊断 ──
+
+    public long DroppedCount => _eventLogStore.DroppedCount;
+    public int PendingCount => _eventLogStore.PendingCount;
+}

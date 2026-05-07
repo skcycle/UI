@@ -65,7 +65,7 @@ public sealed class CommandFeedbackRuntimeState
             TimestampUtc = feedback.Timestamp.UtcDateTime,
             Module = "AxisCommand",
             EventType = feedback.Status,
-            Level = feedback.Status is "Failed" or "Error" ? "Error" : "Info",
+            Level = RuntimeEventLogEntry.DetermineLevel(feedback.Status, feedback.CommandName),
             AxisNo = feedback.AxisNo,
             CommandName = feedback.CommandName,
             Status = feedback.Status,

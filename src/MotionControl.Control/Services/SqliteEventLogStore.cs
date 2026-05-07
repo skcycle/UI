@@ -17,6 +17,10 @@ namespace MotionControl.Control.Services;
 ///
 /// <para><b>自动清理</b></para>
 /// 启动时删除超过 30 天的记录。
+///
+/// <para><b>丢弃监控</b></para>
+/// Channel 满时 DropOldest 模式，<see cref="DroppedCount"/> 记录丢弃数。
+/// 每 60 秒输出一次丢弃摘要日志。
 /// </summary>
 public sealed class SqliteEventLogStore : IEventLogStore, IDisposable
 {
@@ -24,12 +28,20 @@ public sealed class SqliteEventLogStore : IEventLogStore, IDisposable
     private const int ChannelCapacity = 10000;
     private const int BatchWriteSize = 100;
     private const int BatchWriteIntervalMs = 200;
+    private const int DroppedSummaryIntervalMs = 60000;
 
     private readonly Channel<RuntimeEventLogEntry> _channel;
     private readonly string _connectionString;
     private readonly ILogger<SqliteEventLogStore> _logger;
     private readonly CancellationTokenSource _cts = new();
     private readonly Task _consumerTask;
+
+    private long _droppedCount;
+    private long _lastDroppedSummaryCount;
+    private int _pendingCount;
+
+    public long DroppedCount => Interlocked.Read(ref _droppedCount);
+    public int PendingCount => _pendingCount;
 
     public SqliteEventLogStore(string dbPath, ILogger<SqliteEventLogStore>? logger = null)
     {
@@ -92,7 +104,6 @@ public sealed class SqliteEventLogStore : IEventLogStore, IDisposable
 
         _logger.LogInformation("SQLite event log store initialized at {Path}", _connectionString);
 
-        // 启动时清理旧数据
         var cutoff = DateTime.UtcNow.AddDays(-RetentionDays);
         var deleteCmd = conn.CreateCommand();
         deleteCmd.CommandText = "DELETE FROM runtime_events WHERE ts_utc < @cutoff";
@@ -108,9 +119,29 @@ public sealed class SqliteEventLogStore : IEventLogStore, IDisposable
     {
         if (!_channel.Writer.TryWrite(entry))
         {
-            // Channel 满了 DropOldest，理论上不会到这里，但兜底
-            _logger.LogWarning("Event log channel full, entry dropped: module={Module} eventType={EventType}",
-                entry.Module, entry.EventType);
+            Interlocked.Increment(ref _droppedCount);
+        }
+    }
+
+    // ── 排空 ──
+
+    public async Task FlushAsync(CancellationToken ct = default)
+    {
+        _channel.Writer.Complete();
+        var remaining = new List<RuntimeEventLogEntry>();
+
+        await foreach (var entry in _channel.Reader.ReadAllAsync(ct))
+        {
+            remaining.Add(entry);
+        }
+
+        if (remaining.Count > 0)
+        {
+            foreach (var chunk in remaining.Chunk(BatchWriteSize))
+            {
+                await WriteBatchAsync(chunk.ToList(), ct);
+            }
+            _logger.LogInformation("Flushed {Count} pending events on demand", remaining.Count);
         }
     }
 
@@ -119,17 +150,16 @@ public sealed class SqliteEventLogStore : IEventLogStore, IDisposable
     private async Task ConsumeAsync(CancellationToken ct)
     {
         var batch = new List<RuntimeEventLogEntry>(BatchWriteSize);
+        var lastDroppedDump = DateTime.UtcNow;
 
         while (!ct.IsCancellationRequested)
         {
             try
             {
-                // 用 Timer 风格的批处理：等第一条，然后攒到批次大小或超时
                 var first = await _channel.Reader.ReadAsync(ct);
                 batch.Clear();
                 batch.Add(first);
 
-                // 在 BatchWriteIntervalMs 内尽量多拉
                 using var timeoutCts = new CancellationTokenSource(BatchWriteIntervalMs);
                 try
                 {
@@ -139,25 +169,37 @@ public sealed class SqliteEventLogStore : IEventLogStore, IDisposable
                         batch.Add(item);
                     }
                 }
-                catch (OperationCanceledException)
-                {
-                    // 超时，批量写现有数据
-                }
+                catch (OperationCanceledException) { /* timeout, write now */ }
 
                 await WriteBatchAsync(batch, ct);
+
+                // 定期输出丢弃摘要
+                if ((DateTime.UtcNow - lastDroppedDump).TotalMilliseconds > DroppedSummaryIntervalMs)
+                {
+                    DumpDroppedSummary();
+                    lastDroppedDump = DateTime.UtcNow;
+                }
             }
-            catch (OperationCanceledException) when (ct.IsCancellationRequested)
-            {
-                break;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Event log consumer error");
-            }
+            catch (OperationCanceledException) when (ct.IsCancellationRequested) { break; }
+            catch (Exception ex) { _logger.LogError(ex, "Event log consumer error"); }
         }
 
-        // 关机时排空 Channel
         await DrainRemainingAsync();
+    }
+
+    private void DumpDroppedSummary()
+    {
+        var total = Interlocked.Read(ref _droppedCount);
+        var diff = total - Interlocked.Read(ref _lastDroppedSummaryCount);
+        Interlocked.Exchange(ref _lastDroppedSummaryCount, total);
+
+        _pendingCount = _channel.Reader.Count;
+
+        if (diff > 0)
+            _logger.LogWarning("Event log dropped {Diff} entries in last {Interval}s (total={Total}, pending={Pending})",
+                diff, DroppedSummaryIntervalMs / 1000, total, _pendingCount);
+        else if (total > 0)
+            _logger.LogInformation("Event log stable: total dropped={Total}, pending={Pending}", total, _pendingCount);
     }
 
     private async Task WriteBatchAsync(List<RuntimeEventLogEntry> batch, CancellationToken ct)
@@ -177,18 +219,18 @@ public sealed class SqliteEventLogStore : IEventLogStore, IDisposable
                  @isout, @bval, @st, @cmd, @msg, @payload)
         ";
 
-        var tsParam = cmd.Parameters.Add("@ts", SqliteType.Text);
-        var modParam = cmd.Parameters.Add("@mod", SqliteType.Text);
-        var evtParam = cmd.Parameters.Add("@evt", SqliteType.Text);
-        var lvlParam = cmd.Parameters.Add("@lvl", SqliteType.Text);
-        var axParam = cmd.Parameters.Add("@ax", SqliteType.Integer);
-        var objParam = cmd.Parameters.Add("@obj", SqliteType.Text);
+        var tsParam   = cmd.Parameters.Add("@ts", SqliteType.Text);
+        var modParam  = cmd.Parameters.Add("@mod", SqliteType.Text);
+        var evtParam  = cmd.Parameters.Add("@evt", SqliteType.Text);
+        var lvlParam  = cmd.Parameters.Add("@lvl", SqliteType.Text);
+        var axParam   = cmd.Parameters.Add("@ax", SqliteType.Integer);
+        var objParam  = cmd.Parameters.Add("@obj", SqliteType.Text);
         var addrParam = cmd.Parameters.Add("@addr", SqliteType.Integer);
         var isoutParam = cmd.Parameters.Add("@isout", SqliteType.Integer);
         var bvalParam = cmd.Parameters.Add("@bval", SqliteType.Integer);
-        var stParam = cmd.Parameters.Add("@st", SqliteType.Text);
-        var cmdParam = cmd.Parameters.Add("@cmd", SqliteType.Text);
-        var msgParam = cmd.Parameters.Add("@msg", SqliteType.Text);
+        var stParam   = cmd.Parameters.Add("@st", SqliteType.Text);
+        var cmdNameParam = cmd.Parameters.Add("@cmd", SqliteType.Text);
+        var msgParam  = cmd.Parameters.Add("@msg", SqliteType.Text);
         var payloadParam = cmd.Parameters.Add("@payload", SqliteType.Text);
 
         foreach (var entry in batch)
@@ -203,7 +245,7 @@ public sealed class SqliteEventLogStore : IEventLogStore, IDisposable
             isoutParam.Value = entry.IsOutput.HasValue ? (entry.IsOutput.Value ? 1 : 0) : DBNull.Value;
             bvalParam.Value = entry.BoolValue.HasValue ? (entry.BoolValue.Value ? 1 : 0) : DBNull.Value;
             stParam.Value = (object?)entry.Status ?? DBNull.Value;
-            cmdParam.Value = (object?)entry.CommandName ?? DBNull.Value;
+            cmdNameParam.Value = (object?)entry.CommandName ?? DBNull.Value;
             msgParam.Value = (object?)entry.Message ?? DBNull.Value;
             payloadParam.Value = (object?)entry.PayloadJson ?? DBNull.Value;
 
@@ -259,6 +301,7 @@ public sealed class SqliteEventLogStore : IEventLogStore, IDisposable
         string? module = null,
         int? axisNo = null,
         string? level = null,
+        string? objectName = null,
         CancellationToken ct = default)
     {
         await using var conn = new SqliteConnection(_connectionString);
@@ -291,6 +334,11 @@ public sealed class SqliteEventLogStore : IEventLogStore, IDisposable
         {
             where.Add("level = @level");
             cmd.Parameters.AddWithValue("@level", level);
+        }
+        if (!string.IsNullOrEmpty(objectName))
+        {
+            where.Add("object_name = @objectName");
+            cmd.Parameters.AddWithValue("@objectName", objectName);
         }
 
         cmd.CommandText = where.Count == 0
@@ -351,7 +399,7 @@ public sealed class SqliteEventLogStore : IEventLogStore, IDisposable
     {
         _cts.Cancel();
         try { _consumerTask.Wait(TimeSpan.FromSeconds(5)); }
-        catch { /* 尽力排空 */ }
+        catch { /* best effort */ }
         _cts.Dispose();
     }
 }

@@ -43,7 +43,7 @@ public sealed class IoEventRuntimeState
             TimestampUtc = record.Timestamp,
             Module = "IO",
             EventType = record.IsOutput ? "DO" : "DI",
-            Level = "Info",
+            Level = RuntimeEventLogEntry.DetermineLevel(null, record.IsOutput ? "DO" : "DI"),
             ObjectName = record.Name,
             Address = record.Address,
             IsOutput = record.IsOutput,

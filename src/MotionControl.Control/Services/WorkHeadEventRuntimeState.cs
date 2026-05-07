@@ -43,7 +43,7 @@ public sealed class WorkHeadEventRuntimeState
             TimestampUtc = record.Timestamp,
             Module = "WorkHead",
             EventType = record.EventType,
-            Level = "Info",
+            Level = RuntimeEventLogEntry.DetermineLevel(null, record.EventType),
             ObjectName = record.WorkHeadName,
             Message = record.Message,
         });
@@ -101,7 +101,7 @@ public sealed class PositionSetupEventRuntimeState
             TimestampUtc = record.Timestamp,
             Module = "PositionSetup",
             EventType = record.EventType,
-            Level = "Info",
+            Level = RuntimeEventLogEntry.DetermineLevel(null, record.EventType),
             ObjectName = record.PositionName,
             Message = record.Message,
         });

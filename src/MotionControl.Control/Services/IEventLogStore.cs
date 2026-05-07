@@ -19,8 +19,18 @@ public interface IEventLogStore
         string? module = null,
         int? axisNo = null,
         string? level = null,
+        string? objectName = null,
         CancellationToken ct = default);
 
     /// <summary>删除指定时间之前的记录</summary>
     Task<int> DeleteOlderThanAsync(DateTime cutoffUtc, CancellationToken ct = default);
+
+    /// <summary>排空 Channel 中剩余事件，用于优雅关闭</summary>
+    Task FlushAsync(CancellationToken ct = default);
+
+    /// <summary>Channel 满时被丢弃的事件总数</summary>
+    long DroppedCount { get; }
+
+    /// <summary>Channel 当前积压数量</summary>
+    int PendingCount { get; }
 }

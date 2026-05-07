@@ -23,4 +23,9 @@ public interface ISystemAppService
 
     EmergencyStopService GetEmergencyStopService();
     WatchdogService GetWatchdogService();
+
+    /// <summary>排空事件日志到 SQLite（关闭前调用）</summary>
+    Task FlushEventLogAsync(CancellationToken cancellationToken = default);
+
+    EventLogQueryService GetEventLogQueryService();
 }
