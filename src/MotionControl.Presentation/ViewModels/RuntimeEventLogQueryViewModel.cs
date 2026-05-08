@@ -24,7 +24,6 @@ public sealed class RuntimeEventLogQueryViewModel : INotifyPropertyChanged, IDis
 
     private int _currentPage = 1;
     private const int PageSize = 200;
-    private const int MaxQueryRows = 2000;
 
     public RuntimeEventLogQueryViewModel(EventLogQueryService queryService, ILogger<RuntimeEventLogQueryViewModel>? logger = null)
     {
@@ -34,6 +33,8 @@ public sealed class RuntimeEventLogQueryViewModel : INotifyPropertyChanged, IDis
         // Default: Last 30 minutes
         FromTime = DateTime.Now.AddMinutes(-30);
         ToTime = null;
+        _fromTimeText = FromTime?.ToString("yyyy-MM-dd HH:mm:ss") ?? "";
+        _toTimeText = "";
 
         // Commands
         SearchCommand = new RelayCommand(async () => await SearchAsync());
@@ -84,6 +85,38 @@ public sealed class RuntimeEventLogQueryViewModel : INotifyPropertyChanged, IDis
 
     private string? _selectedStatus;
     public string? SelectedStatus { get => _selectedStatus; set { _selectedStatus = value; OnPropertyChanged(); } }
+
+    // ── DateTime 文本输入属性 ───────────────────────────────
+
+    private string _fromTimeText = "";
+    public string FromTimeText
+    {
+        get => _fromTimeText;
+        set
+        {
+            _fromTimeText = value;
+            OnPropertyChanged();
+            if (DateTime.TryParse(value, out var dt))
+                FromTime = dt;
+            else if (string.IsNullOrWhiteSpace(value))
+                FromTime = null;
+        }
+    }
+
+    private string _toTimeText = "";
+    public string ToTimeText
+    {
+        get => _toTimeText;
+        set
+        {
+            _toTimeText = value;
+            OnPropertyChanged();
+            if (string.IsNullOrWhiteSpace(value))
+                ToTime = null;
+            else if (DateTime.TryParse(value, out var dt))
+                ToTime = dt;
+        }
+    }
 
     // ── 动态选项 ───────────────────────────────────────────────
 
@@ -195,15 +228,22 @@ public sealed class RuntimeEventLogQueryViewModel : INotifyPropertyChanged, IDis
                 StatusText = $"⚠ Large range ({(toUtc.Value - fromUtc.Value).TotalDays:F0}d), this may take a moment...";
             }
 
-            var results = await Task.Run(() =>
-                _eventLogStore.QueryAsync(fromUtc, toUtc, module, SelectedAxisNo, level,
-                    string.IsNullOrWhiteSpace(SelectedObjectName) ? null : SelectedObjectName, ct), ct);
+            var objName = string.IsNullOrWhiteSpace(SelectedObjectName) ? null : SelectedObjectName;
+            var cmdName = string.IsNullOrWhiteSpace(SelectedCommandName) ? null : SelectedCommandName;
+            var st = string.IsNullOrWhiteSpace(SelectedStatus) ? null : SelectedStatus;
 
+            var countTask = Task.Run(() =>
+                _eventLogStore.QueryCountAsync(fromUtc, toUtc, module, SelectedAxisNo, level, objName, cmdName, st, ct), ct);
+            var resultsTask = Task.Run(() =>
+                _eventLogStore.QueryAsync(fromUtc, toUtc, module, SelectedAxisNo, level, objName, cmdName, st, PageSize, 0, ct), ct);
+
+            await Task.WhenAll(countTask, resultsTask);
             ct.ThrowIfCancellationRequested();
 
-            TotalRows = results.Count;
+            TotalRows = await countTask;
+            var results = await resultsTask;
             Events = new ObservableCollection<RuntimeEventLogItemViewModel>(
-                results.Take(PageSize).Select(e => new RuntimeEventLogItemViewModel(e)));
+                results.Select(e => new RuntimeEventLogItemViewModel(e)));
 
             StatusText = $"{TotalRows} results | {DateTime.Now:HH:mm:ss}";
         }
@@ -252,6 +292,11 @@ public sealed class RuntimeEventLogQueryViewModel : INotifyPropertyChanged, IDis
             var module = string.IsNullOrEmpty(SelectedModule) || SelectedModule == "All" ? null : SelectedModule;
             var level = string.IsNullOrEmpty(SelectedLevel) || SelectedLevel == "All" ? null : SelectedLevel;
 
+            var objName = string.IsNullOrWhiteSpace(SelectedObjectName) ? null : SelectedObjectName;
+            var cmdName = string.IsNullOrWhiteSpace(SelectedCommandName) ? null : SelectedCommandName;
+            var st = string.IsNullOrWhiteSpace(SelectedStatus) ? null : SelectedStatus;
+            var offset = (CurrentPage - 1) * PageSize;
+
             var results = await Task.Run(() =>
                 _eventLogStore.QueryAsync(
                     FromTime?.ToUniversalTime(),
@@ -259,12 +304,15 @@ public sealed class RuntimeEventLogQueryViewModel : INotifyPropertyChanged, IDis
                     module,
                     SelectedAxisNo,
                     level,
-                    string.IsNullOrWhiteSpace(SelectedObjectName) ? null : SelectedObjectName,
+                    objName,
+                    cmdName,
+                    st,
+                    PageSize,
+                    offset,
                     ct), ct);
 
             Events = new ObservableCollection<RuntimeEventLogItemViewModel>(
-                results.Skip((CurrentPage - 1) * PageSize).Take(PageSize)
-                    .Select(e => new RuntimeEventLogItemViewModel(e)));
+                results.Select(e => new RuntimeEventLogItemViewModel(e)));
 
             StatusText = $"Page {CurrentPage} | {TotalRows} total | {DateTime.Now:HH:mm:ss}";
         }
@@ -313,6 +361,8 @@ public sealed class RuntimeEventLogQueryViewModel : INotifyPropertyChanged, IDis
         SelectedEvent = null;
         FromTime = DateTime.Now.AddMinutes(-30);
         ToTime = null;
+        FromTimeText = FromTime?.ToString("yyyy-MM-dd HH:mm:ss") ?? "";
+        ToTimeText = "";
         SelectedModule = null;
         SelectedAxisNo = null;
         SelectedLevel = null;
@@ -334,12 +384,16 @@ public sealed class RuntimeEventLogQueryViewModel : INotifyPropertyChanged, IDis
         SelectedStatus = null;
         FromTime = DateTime.Now.AddMinutes(-30);
         ToTime = null;
+        FromTimeText = FromTime?.ToString("yyyy-MM-dd HH:mm:ss") ?? "";
+        ToTimeText = "";
     }
 
     private void SetTimeFilter(int minutes)
     {
         FromTime = DateTime.Now.AddMinutes(-minutes);
         ToTime = null;
+        FromTimeText = FromTime?.ToString("yyyy-MM-dd HH:mm:ss") ?? "";
+        ToTimeText = "";
     }
 
     private void TestWrite()

@@ -15,7 +15,7 @@ public interface IEventLogStore
     /// <summary>查询最近 N 条事件</summary>
     Task<IReadOnlyList<RuntimeEventLogEntry>> QueryRecentAsync(int count, CancellationToken ct = default);
 
-    /// <summary>按时间/模块/轴号/级别/对象名查询</summary>
+    /// <summary>按时间/模块/轴号/级别/对象名/命令/状态查询，支持 SQL 级分页</summary>
     Task<IReadOnlyList<RuntimeEventLogEntry>> QueryAsync(
         DateTime? fromUtc = null,
         DateTime? toUtc = null,
@@ -23,6 +23,22 @@ public interface IEventLogStore
         int? axisNo = null,
         string? level = null,
         string? objectName = null,
+        string? commandName = null,
+        string? status = null,
+        int? maxRows = null,
+        int? offset = null,
+        CancellationToken ct = default);
+
+    /// <summary>按相同条件查询总数（供分页用）</summary>
+    Task<int> QueryCountAsync(
+        DateTime? fromUtc = null,
+        DateTime? toUtc = null,
+        string? module = null,
+        int? axisNo = null,
+        string? level = null,
+        string? objectName = null,
+        string? commandName = null,
+        string? status = null,
         CancellationToken ct = default);
 
     /// <summary>删除指定时间之前的记录</summary>

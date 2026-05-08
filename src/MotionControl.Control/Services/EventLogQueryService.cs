@@ -22,7 +22,7 @@ public sealed class EventLogQueryService : IEventLogStore
     public Task<IReadOnlyList<RuntimeEventLogEntry>> QueryRecentAsync(int count = 200, CancellationToken ct = default)
         => _eventLogStore.QueryRecentAsync(count, ct);
 
-    /// <summary>通用条件查询</summary>
+    /// <summary>通用条件查询，支持 SQL 级分页</summary>
     public Task<IReadOnlyList<RuntimeEventLogEntry>> QueryAsync(
         DateTime? fromUtc = null,
         DateTime? toUtc = null,
@@ -30,8 +30,25 @@ public sealed class EventLogQueryService : IEventLogStore
         int? axisNo = null,
         string? level = null,
         string? objectName = null,
+        string? commandName = null,
+        string? status = null,
+        int? maxRows = null,
+        int? offset = null,
         CancellationToken ct = default)
-        => _eventLogStore.QueryAsync(fromUtc, toUtc, module, axisNo, level, objectName, ct);
+        => _eventLogStore.QueryAsync(fromUtc, toUtc, module, axisNo, level, objectName, commandName, status, maxRows, offset, ct);
+
+    /// <summary>按相同条件查询总数（供分页用）</summary>
+    public Task<int> QueryCountAsync(
+        DateTime? fromUtc = null,
+        DateTime? toUtc = null,
+        string? module = null,
+        int? axisNo = null,
+        string? level = null,
+        string? objectName = null,
+        string? commandName = null,
+        string? status = null,
+        CancellationToken ct = default)
+        => _eventLogStore.QueryCountAsync(fromUtc, toUtc, module, axisNo, level, objectName, commandName, status, ct);
 
     /// <summary>最近 N 秒内的 Error 事件</summary>
     public Task<IReadOnlyList<RuntimeEventLogEntry>> QueryRecentErrorsAsync(int secondsBack = 300, CancellationToken ct = default)

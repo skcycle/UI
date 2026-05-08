@@ -51,12 +51,16 @@
         <!-- Main toolbar -->
         <Border Grid.Row="2" Style="{StaticResource SectionCardStyle}" Margin="0,4,0,4" Padding="10,8">
             <WrapPanel>
-                <!-- Time range -->
+                <!-- Time range with full DateTime input -->
                 <TextBlock Text="From:" VerticalAlignment="Center" Margin="0,0,4,0" FontSize="12" />
-                <DatePicker SelectedDate="{Binding FromTime}" Width="130" Margin="0,0,8,0" />
+                <TextBox Text="{Binding FromTimeText, UpdateSourceTrigger=LostFocus}"
+                         Width="170" Margin="0,0,8,0" FontSize="11"
+                         ToolTip="yyyy-MM-dd HH:mm:ss (e.g. 2026-05-08 10:30:00)" />
 
                 <TextBlock Text="To:" VerticalAlignment="Center" Margin="0,0,4,0" FontSize="12" />
-                <DatePicker SelectedDate="{Binding ToTime}" Width="130" Margin="0,0,12,0" />
+                <TextBox Text="{Binding ToTimeText, UpdateSourceTrigger=LostFocus}"
+                         Width="170" Margin="0,0,12,0" FontSize="11"
+                         ToolTip="yyyy-MM-dd HH:mm:ss — leave empty for 'now'" />
 
                 <!-- Module -->
                 <TextBlock Text="Module:" VerticalAlignment="Center" Margin="0,0,4,0" FontSize="12" />
@@ -76,6 +80,11 @@
                 <!-- Object name (fuzzy) -->
                 <TextBlock Text="Object:" VerticalAlignment="Center" Margin="0,0,4,0" FontSize="12" />
                 <TextBox Text="{Binding SelectedObjectName, UpdateSourceTrigger=PropertyChanged}"
+                         Width="90" Margin="0,0,8,0" />
+
+                <!-- Command name -->
+                <TextBlock Text="Cmd:" VerticalAlignment="Center" Margin="0,0,4,0" FontSize="12" />
+                <TextBox Text="{Binding SelectedCommandName, UpdateSourceTrigger=PropertyChanged}"
                          Width="90" Margin="0,0,8,0" />
 
                 <!-- Status -->

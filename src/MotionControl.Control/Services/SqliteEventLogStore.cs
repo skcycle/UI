@@ -306,11 +306,64 @@ public sealed class SqliteEventLogStore : IEventLogStore, IDisposable
         int? axisNo = null,
         string? level = null,
         string? objectName = null,
+        string? commandName = null,
+        string? status = null,
+        int? maxRows = null,
+        int? offset = null,
         CancellationToken ct = default)
     {
         await using var conn = new SqliteConnection(_connectionString);
         await conn.OpenAsync(ct);
 
+        var (where, cmd) = BuildWhereClauses(conn, fromUtc, toUtc, module, axisNo, level, objectName, commandName, status);
+
+        var limit = maxRows ?? (where.Count == 0 ? 500 : 1000);
+        var sql = where.Count == 0
+            ? $"SELECT * FROM runtime_events ORDER BY ts_utc DESC LIMIT {limit}"
+            : $"SELECT * FROM runtime_events WHERE {string.Join(" AND ", where)} ORDER BY ts_utc DESC LIMIT {limit}";
+
+        if (offset.HasValue)
+            sql += $" OFFSET {offset.Value}";
+
+        cmd.CommandText = sql;
+        return await ReadEntriesAsync(cmd, ct);
+    }
+
+    public async Task<int> QueryCountAsync(
+        DateTime? fromUtc = null,
+        DateTime? toUtc = null,
+        string? module = null,
+        int? axisNo = null,
+        string? level = null,
+        string? objectName = null,
+        string? commandName = null,
+        string? status = null,
+        CancellationToken ct = default)
+    {
+        await using var conn = new SqliteConnection(_connectionString);
+        await conn.OpenAsync(ct);
+
+        var (where, cmd) = BuildWhereClauses(conn, fromUtc, toUtc, module, axisNo, level, objectName, commandName, status);
+
+        cmd.CommandText = where.Count == 0
+            ? "SELECT COUNT(*) FROM runtime_events"
+            : $"SELECT COUNT(*) FROM runtime_events WHERE {string.Join(" AND ", where)}";
+
+        var result = await cmd.ExecuteScalarAsync(ct);
+        return Convert.ToInt32(result);
+    }
+
+    private static (List<string> where, SqliteCommand cmd) BuildWhereClauses(
+        SqliteConnection conn,
+        DateTime? fromUtc,
+        DateTime? toUtc,
+        string? module,
+        int? axisNo,
+        string? level,
+        string? objectName,
+        string? commandName,
+        string? status)
+    {
         var where = new List<string>();
         var cmd = conn.CreateCommand();
 
@@ -344,12 +397,18 @@ public sealed class SqliteEventLogStore : IEventLogStore, IDisposable
             where.Add("object_name = @objectName");
             cmd.Parameters.AddWithValue("@objectName", objectName);
         }
+        if (!string.IsNullOrEmpty(commandName))
+        {
+            where.Add("command_name = @commandName");
+            cmd.Parameters.AddWithValue("@commandName", commandName);
+        }
+        if (!string.IsNullOrEmpty(status))
+        {
+            where.Add("status = @status");
+            cmd.Parameters.AddWithValue("@status", status);
+        }
 
-        cmd.CommandText = where.Count == 0
-            ? "SELECT * FROM runtime_events ORDER BY ts_utc DESC LIMIT 500"
-            : $"SELECT * FROM runtime_events WHERE {string.Join(" AND ", where)} ORDER BY ts_utc DESC LIMIT 1000";
-
-        return await ReadEntriesAsync(cmd, ct);
+        return (where, cmd);
     }
 
     public async Task<int> DeleteOlderThanAsync(DateTime cutoffUtc, CancellationToken ct = default)
