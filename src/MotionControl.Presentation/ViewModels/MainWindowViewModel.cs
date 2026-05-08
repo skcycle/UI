@@ -53,8 +53,10 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IOperationStat
     private readonly WorkHeadEventRuntimeState _workHeadEventRuntimeState;
     private readonly ControllerRuntimeState _controllerRuntimeState;
     private readonly Device.Abstractions.Controllers.IAxisMotionController _motionController;
+    private readonly IEventLogStore _eventLogQueryService;
     private readonly Timer _clockTimer;
     private DateTime _lastDashboardRefreshUtc = DateTime.MinValue;
+    private DateTime _lastPersistedErrorsRefreshUtc = DateTime.MinValue;
     private DateTime _lastAxisRefreshUtc = DateTime.MinValue;
     private DateTime _lastAlarmRefreshUtc = DateTime.MinValue;
     private DateTime _lastIoRefreshUtc = DateTime.MinValue;
@@ -130,7 +132,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IOperationStat
         _dialogService = dialogService;
         _controllerRuntimeState = controllerRuntimeState;
         _motionController = motionController;
-        Dashboard = new DashboardViewModel(machine, commandFeedbackRuntimeState);
+        _eventLogQueryService = eventLogQueryService;
+        Dashboard = new DashboardViewModel(machine, commandFeedbackRuntimeState, eventLogQueryService);
         EtherCatMonitor = new EtherCatMonitorViewModel(Dashboard);
         AxisMonitor = new AxisMonitorViewModel(machine, axisControlService, dialogService, commandFeedbackRuntimeState);
         AxisMonitor.SelectedAxisChanged += _ => RaiseAxisDeleteCanExecuteChanged();
@@ -567,6 +570,13 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IOperationStat
         {
             Dashboard.Refresh(_controllerRuntimeState.LastControllerStatus);
             _lastDashboardRefreshUtc = now;
+        }
+
+        // Throttled persisted-error refresh every 5 seconds
+        if (now - _lastPersistedErrorsRefreshUtc >= TimeSpan.FromSeconds(5))
+        {
+            _lastPersistedErrorsRefreshUtc = now;
+            _ = Dashboard.RefreshPersistedErrorsAsync();
         }
 
         if (force || now - _lastAxisRefreshUtc >= TimeSpan.FromMilliseconds(300))
@@ -1564,6 +1574,9 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IOperationStat
         OperationStatus = $"{magazine.Name} Scan 中...";
         MagazineEventLogRecord(eventName, "Command", $"{eventName} scan started, layers={totalLayers}, step={magazine.LayerHeight:F2}, settling={magazine.ScanSettlingMs}ms");
 
+        var layersWithMaterial = 0;
+        int? firstEmptyLayer = null;
+
         try
         {
             // 显式串行：底层 _multiStepLock 串行化复合命令
@@ -1629,6 +1642,10 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IOperationStat
                 var hasMaterial = sensor.Value;
                 magazine.SetLayerScanStatus(layerIndex, hasMaterial);
                 magazine.Refresh();
+
+                if (hasMaterial) layersWithMaterial++;
+                else if (firstEmptyLayer is null) firstEmptyLayer = layerIndex + 1;
+
                 var resultText = hasMaterial ? "有料" : "无料";
                 MagazineEventLogRecord(eventName, "Scan", $"{magazine.Name} 第{layerIndex + 1}层检测结果: {resultText}");
             }
@@ -1638,7 +1655,31 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IOperationStat
                 MagazineEventLogRecord(eventName, "AlarmCleared", $"{eventName} cleared alarm {scanAlarmCode}");
             }
 
-            OperationStatus = $"{magazine.Name} Scan 完成，共扫描 {totalLayers} 层";
+            var emptyLayers = totalLayers - layersWithMaterial;
+            OperationStatus = $"{magazine.Name} Scan 完成 | 总{totalLayers}层 有料{layersWithMaterial} 空{emptyLayers}" +
+                (firstEmptyLayer.HasValue ? $" 首空层#{firstEmptyLayer}" : "");
+
+            // Write summary as a structured payload entry for later querying
+            var summaryEntry = new RuntimeEventLogEntry
+            {
+                TimestampUtc = DateTime.UtcNow,
+                Module = "Magazine",
+                EventType = "ScanSummary",
+                Level = emptyLayers > 0 ? "Warning" : "Info",
+                ObjectName = magazine.Name,
+                Message = $"{eventName} 扫描汇总: 共{totalLayers}层, 有料{layersWithMaterial}层, 空{emptyLayers}层" +
+                    (firstEmptyLayer.HasValue ? $", 首个空层: #{firstEmptyLayer}" : ", 全满"),
+                PayloadJson = System.Text.Json.JsonSerializer.Serialize(new
+                {
+                    totalLayers,
+                    layersWithMaterial,
+                    emptyLayers,
+                    firstEmptyLayer,
+                    magazine = magazine.Name,
+                    layerHeight = magazine.LayerHeight
+                })
+            };
+            _eventLogQueryService.Enqueue(summaryEntry);
             MagazineEventLogRecord(eventName, "Success", $"{eventName} scan completed, layers={totalLayers}");
         }
         catch (Exception ex)

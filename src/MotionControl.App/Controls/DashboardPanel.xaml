@@ -71,16 +71,21 @@
 
                             <Border Grid.Column="2" Style="{StaticResource SectionCardStyle}">
                                 <StackPanel>
-                                    <TextBlock Text="System Overview" Style="{StaticResource SectionTitleTextStyle}" />
-                                    <TextBlock Text="Use the left navigation to jump into detailed control pages." Style="{StaticResource SectionHintTextStyle}" />
-                                    <ItemsControl>
-                                        <ItemsControl.Items>
-                                            <TextBlock Text="• Axis Console for jog, move and parameter management" Margin="0,0,0,8" />
-                                            <TextBlock Text="• IO Monitor for DI/DO status and configuration" Margin="0,0,0,8" />
-                                            <TextBlock Text="• Work Head and Position Setup for process objects" Margin="0,0,0,8" />
-                                            <TextBlock Text="• Alarm Center for active fault review" />
-                                        </ItemsControl.Items>
-                                    </ItemsControl>
+                                    <TextBlock Text="Recent Persisted Errors" Style="{StaticResource SectionTitleTextStyle}" />
+                                    <TextBlock Text="Last 15 errors from SQLite history (survives restart)" Style="{StaticResource SectionHintTextStyle}" />
+                                    <ListBox ItemsSource="{Binding Dashboard.RecentPersistedErrors}" MaxHeight="260"
+                                             ScrollViewer.VerticalScrollBarVisibility="Auto">
+                                        <ListBox.ItemTemplate>
+                                            <DataTemplate>
+                                                <StackPanel Orientation="Horizontal">
+                                                    <TextBlock Text="{Binding Time}" Width="130" Foreground="{StaticResource SecondaryTextBrush}" FontSize="11" />
+                                                    <TextBlock Text="{Binding Axis}" Width="40" Foreground="{StaticResource SecondaryTextBrush}" FontSize="11" />
+                                                    <TextBlock Text="{Binding Event}" Width="150" FontSize="11" FontWeight="SemiBold" Foreground="#DC143C" />
+                                                    <TextBlock Text="{Binding Message}" FontSize="11" TextTrimming="CharacterEllipsis" />
+                                                </StackPanel>
+                                            </DataTemplate>
+                                        </ListBox.ItemTemplate>
+                                    </ListBox>
                                 </StackPanel>
                             </Border>
                         </Grid>

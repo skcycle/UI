@@ -12,15 +12,18 @@ public sealed class DashboardViewModel : INotifyPropertyChanged
 
     private readonly Machine _machine;
     private readonly CommandFeedbackRuntimeState _commandFeedbackRuntimeState;
+    private readonly IEventLogStore _eventLogStore;
     private EtherCatControllerStatus? _controllerStatus;
     private RuntimeEventLogItem[] _lastRecentCommandFeedback = Array.Empty<RuntimeEventLogItem>();
     private string[] _lastActiveAlarmSummary = Array.Empty<string>();
     private EtherCatSlaveViewModel[] _lastEtherCatSlaves = Array.Empty<EtherCatSlaveViewModel>();
+    private IReadOnlyList<RuntimeEventLogItem> _recentPersistedErrors = Array.Empty<RuntimeEventLogItem>();
 
-    public DashboardViewModel(Machine machine, CommandFeedbackRuntimeState commandFeedbackRuntimeState)
+    public DashboardViewModel(Machine machine, CommandFeedbackRuntimeState commandFeedbackRuntimeState, IEventLogStore eventLogStore)
     {
         _machine = machine;
         _commandFeedbackRuntimeState = commandFeedbackRuntimeState;
+        _eventLogStore = eventLogStore;
     }
 
     public event PropertyChangedEventHandler? PropertyChanged;
@@ -46,6 +49,28 @@ public sealed class DashboardViewModel : INotifyPropertyChanged
     public IReadOnlyList<RuntimeEventLogItem> RecentAxisCommandFeedback { get; private set; } = Array.Empty<RuntimeEventLogItem>();
     public IReadOnlyList<string> AlarmLog { get; private set; } = Array.Empty<string>();
     public IReadOnlyList<string> ActiveAlarmSummary { get; private set; } = Array.Empty<string>();
+
+    /// <summary>从 SQLite 拉取的最近 Error 事件（跨重启持久化）</summary>
+    public IReadOnlyList<RuntimeEventLogItem> RecentPersistedErrors
+    {
+        get => _recentPersistedErrors;
+        private set { _recentPersistedErrors = value; OnPropertyChanged(); }
+    }
+
+    public async Task RefreshPersistedErrorsAsync(CancellationToken ct = default)
+    {
+        try
+        {
+            var errors = await _eventLogStore.QueryAsync(level: "Error", maxRows: 15, ct: ct);
+            RecentPersistedErrors = errors.Select(e => new RuntimeEventLogItem(
+                e.TimestampUtc.ToLocalTime().ToString("MM-dd HH:mm:ss"),
+                e.AxisNo?.ToString() ?? "-",
+                $"{e.Module}/{e.EventType}",
+                e.Message ?? "")).ToList();
+        }
+        catch (OperationCanceledException) { /* skip */ }
+        catch (Exception) { /* silently skip transient query failures */ }
+    }
 
     public void Refresh(EtherCatControllerStatus? controllerStatus = null)
     {

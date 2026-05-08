@@ -337,7 +337,7 @@ public sealed class WorkHeadItemViewModel : INotifyPropertyChanged
                 }
             }
 
-            _workHeadEventRuntimeState.Add(new WorkHeadEventRecord { WorkHeadName = _workHead.Name, EventType = "Success", Message = $"{eventName} move completed" });
+            _workHeadEventRuntimeState.Add(new WorkHeadEventRecord { WorkHeadName = _workHead.Name, EventType = "Succeeded", Message = $"{eventName} move completed" });
         }
         catch (Exception ex)
         {
@@ -361,7 +361,7 @@ public sealed class WorkHeadItemViewModel : INotifyPropertyChanged
         {
             _workHead.VacuumSuccessLogged = true;
             _workHead.StopVacuumCommand();
-            _workHeadEventRuntimeState.Add(new WorkHeadEventRecord { WorkHeadName = _workHead.Name, EventType = "Success", Message = $"{_workHead.Name} vacuum detected" });
+            _workHeadEventRuntimeState.Add(new WorkHeadEventRecord { WorkHeadName = _workHead.Name, EventType = "Succeeded", Message = $"{_workHead.Name} vacuum detected" });
             _machine.ClearAlarm(timeoutAlarmCode);
         }
         if (!VacuumDoOn && VacuumDiOn)
