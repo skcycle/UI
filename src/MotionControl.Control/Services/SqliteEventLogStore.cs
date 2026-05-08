@@ -308,6 +308,10 @@ public sealed class SqliteEventLogStore : IEventLogStore, IDisposable
         string? objectName = null,
         string? commandName = null,
         string? status = null,
+        int? address = null,
+        bool? isOutput = null,
+        bool? boolValue = null,
+        string? messageSearch = null,
         int? maxRows = null,
         int? offset = null,
         CancellationToken ct = default)
@@ -315,7 +319,7 @@ public sealed class SqliteEventLogStore : IEventLogStore, IDisposable
         await using var conn = new SqliteConnection(_connectionString);
         await conn.OpenAsync(ct);
 
-        var (where, cmd) = BuildWhereClauses(conn, fromUtc, toUtc, module, axisNo, level, objectName, commandName, status);
+        var (where, cmd) = BuildWhereClauses(conn, fromUtc, toUtc, module, axisNo, level, objectName, commandName, status, address, isOutput, boolValue, messageSearch);
 
         var limit = maxRows ?? (where.Count == 0 ? 500 : 1000);
         var sql = where.Count == 0
@@ -338,12 +342,16 @@ public sealed class SqliteEventLogStore : IEventLogStore, IDisposable
         string? objectName = null,
         string? commandName = null,
         string? status = null,
+        int? address = null,
+        bool? isOutput = null,
+        bool? boolValue = null,
+        string? messageSearch = null,
         CancellationToken ct = default)
     {
         await using var conn = new SqliteConnection(_connectionString);
         await conn.OpenAsync(ct);
 
-        var (where, cmd) = BuildWhereClauses(conn, fromUtc, toUtc, module, axisNo, level, objectName, commandName, status);
+        var (where, cmd) = BuildWhereClauses(conn, fromUtc, toUtc, module, axisNo, level, objectName, commandName, status, address, isOutput, boolValue, messageSearch);
 
         cmd.CommandText = where.Count == 0
             ? "SELECT COUNT(*) FROM runtime_events"
@@ -362,7 +370,11 @@ public sealed class SqliteEventLogStore : IEventLogStore, IDisposable
         string? level,
         string? objectName,
         string? commandName,
-        string? status)
+        string? status,
+        int? address,
+        bool? isOutput,
+        bool? boolValue,
+        string? messageSearch)
     {
         var where = new List<string>();
         var cmd = conn.CreateCommand();
@@ -406,6 +418,26 @@ public sealed class SqliteEventLogStore : IEventLogStore, IDisposable
         {
             where.Add("status = @status");
             cmd.Parameters.AddWithValue("@status", status);
+        }
+        if (address.HasValue)
+        {
+            where.Add("address = @address");
+            cmd.Parameters.AddWithValue("@address", address.Value);
+        }
+        if (isOutput.HasValue)
+        {
+            where.Add("is_output = @isOutput");
+            cmd.Parameters.AddWithValue("@isOutput", isOutput.Value ? 1 : 0);
+        }
+        if (boolValue.HasValue)
+        {
+            where.Add("bool_value = @boolValue");
+            cmd.Parameters.AddWithValue("@boolValue", boolValue.Value ? 1 : 0);
+        }
+        if (!string.IsNullOrEmpty(messageSearch))
+        {
+            where.Add("message LIKE @messageSearch");
+            cmd.Parameters.AddWithValue("@messageSearch", $"%{messageSearch}%");
         }
 
         return (where, cmd);

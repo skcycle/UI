@@ -90,7 +90,27 @@
                 <!-- Status -->
                 <TextBlock Text="Status:" VerticalAlignment="Center" Margin="0,0,4,0" FontSize="12" />
                 <TextBox Text="{Binding SelectedStatus, UpdateSourceTrigger=PropertyChanged}"
-                         Width="80" Margin="0,0,12,0" />
+                         Width="80" Margin="0,0,8,0" />
+
+                <!-- IO type -->
+                <TextBlock Text="IO:" VerticalAlignment="Center" Margin="0,0,4,0" FontSize="12" />
+                <ComboBox ItemsSource="{Binding IoOptions}" SelectedItem="{Binding SelectedIoOption}"
+                          Width="100" Margin="0,0,8,0" />
+
+                <!-- BoolValue -->
+                <TextBlock Text="Val:" VerticalAlignment="Center" Margin="0,0,4,0" FontSize="12" />
+                <ComboBox ItemsSource="{Binding BoolValueOptions}" SelectedItem="{Binding SelectedBoolValueOption}"
+                          Width="65" Margin="0,0,8,0" />
+
+                <!-- Address -->
+                <TextBlock Text="Addr:" VerticalAlignment="Center" Margin="0,0,4,0" FontSize="12" />
+                <TextBox Text="{Binding SelectedAddressText, UpdateSourceTrigger=PropertyChanged}"
+                         Width="55" Margin="0,0,8,0" />
+
+                <!-- Message search (fuzzy) -->
+                <TextBlock Text="Msg:" VerticalAlignment="Center" Margin="0,0,4,0" FontSize="12" />
+                <TextBox Text="{Binding SelectedMessageSearch, UpdateSourceTrigger=PropertyChanged}"
+                         Width="110" Margin="0,0,12,0" />
 
                 <!-- Action buttons -->
                 <Button Content="Search" Command="{Binding SearchCommand}"

@@ -284,20 +284,21 @@ public sealed class AxisParameterEditorViewModel : INotifyPropertyChanged
     {
         _commandFeedbackRuntimeState.AddStarted("AxisControllerWrite", AxisNo, $"Axis {AxisNo} controller parameter write started");
 
-        try
+        var result = await _axisControllerParameterAppService.WriteControllerParametersAsync(
+            AxisNo,
+            WorkVelocity ?? 0,
+            SetupVelocity ?? 0,
+            PulseEquivalent ?? 1000);
+
+        if (result.Success)
         {
-            await _axisControllerParameterAppService.WriteControllerParametersAsync(
-                AxisNo,
-                WorkVelocity ?? 0,
-                SetupVelocity ?? 0,
-                PulseEquivalent ?? 1000);
             var message = $"Axis {AxisNo} controller parameters written";
             _statusReporter.ReportStatus(message);
             _commandFeedbackRuntimeState.AddSucceeded("AxisControllerWrite", AxisNo, message);
         }
-        catch (Exception ex)
+        else
         {
-            var message = $"Axis {AxisNo} controller parameter write failed: {ex.Message}";
+            var message = $"Axis {AxisNo} controller parameter write failed: {result.ErrorMessage}";
             _statusReporter.ReportStatus(message);
             _commandFeedbackRuntimeState.AddFailed("AxisControllerWrite", AxisNo, message);
         }

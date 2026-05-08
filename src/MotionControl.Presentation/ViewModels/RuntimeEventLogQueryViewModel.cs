@@ -86,6 +86,23 @@ public sealed class RuntimeEventLogQueryViewModel : INotifyPropertyChanged, IDis
     private string? _selectedStatus;
     public string? SelectedStatus { get => _selectedStatus; set { _selectedStatus = value; OnPropertyChanged(); } }
 
+    // ── 扩展过滤维度 ────────────────────────────────────────
+
+    private string? _selectedAddressText;
+    public string? SelectedAddressText { get => _selectedAddressText; set { _selectedAddressText = value; OnPropertyChanged(); } }
+
+    private string _selectedIoOption = "All";
+    public string SelectedIoOption { get => _selectedIoOption; set { _selectedIoOption = value; OnPropertyChanged(); } }
+
+    private string _selectedBoolValueOption = "All";
+    public string SelectedBoolValueOption { get => _selectedBoolValueOption; set { _selectedBoolValueOption = value; OnPropertyChanged(); } }
+
+    private string? _selectedMessageSearch;
+    public string? SelectedMessageSearch { get => _selectedMessageSearch; set { _selectedMessageSearch = value; OnPropertyChanged(); } }
+
+    public string[] IoOptions { get; } = { "All", "DI (Input)", "DO (Output)" };
+    public string[] BoolValueOptions { get; } = { "All", "ON", "OFF" };
+
     // ── DateTime 文本输入属性 ───────────────────────────────
 
     private string _fromTimeText = "";
@@ -228,14 +245,12 @@ public sealed class RuntimeEventLogQueryViewModel : INotifyPropertyChanged, IDis
                 StatusText = $"⚠ Large range ({(toUtc.Value - fromUtc.Value).TotalDays:F0}d), this may take a moment...";
             }
 
-            var objName = string.IsNullOrWhiteSpace(SelectedObjectName) ? null : SelectedObjectName;
-            var cmdName = string.IsNullOrWhiteSpace(SelectedCommandName) ? null : SelectedCommandName;
-            var st = string.IsNullOrWhiteSpace(SelectedStatus) ? null : SelectedStatus;
+            var (objName, cmdName, st, addr, isOut, bVal, msgSearch) = BuildFilterValues();
 
             var countTask = Task.Run(() =>
-                _eventLogStore.QueryCountAsync(fromUtc, toUtc, module, SelectedAxisNo, level, objName, cmdName, st, ct), ct);
+                _eventLogStore.QueryCountAsync(fromUtc, toUtc, module, SelectedAxisNo, level, objName, cmdName, st, addr, isOut, bVal, msgSearch, ct), ct);
             var resultsTask = Task.Run(() =>
-                _eventLogStore.QueryAsync(fromUtc, toUtc, module, SelectedAxisNo, level, objName, cmdName, st, PageSize, 0, ct), ct);
+                _eventLogStore.QueryAsync(fromUtc, toUtc, module, SelectedAxisNo, level, objName, cmdName, st, addr, isOut, bVal, msgSearch, PageSize, 0, ct), ct);
 
             await Task.WhenAll(countTask, resultsTask);
             ct.ThrowIfCancellationRequested();
@@ -292,9 +307,7 @@ public sealed class RuntimeEventLogQueryViewModel : INotifyPropertyChanged, IDis
             var module = string.IsNullOrEmpty(SelectedModule) || SelectedModule == "All" ? null : SelectedModule;
             var level = string.IsNullOrEmpty(SelectedLevel) || SelectedLevel == "All" ? null : SelectedLevel;
 
-            var objName = string.IsNullOrWhiteSpace(SelectedObjectName) ? null : SelectedObjectName;
-            var cmdName = string.IsNullOrWhiteSpace(SelectedCommandName) ? null : SelectedCommandName;
-            var st = string.IsNullOrWhiteSpace(SelectedStatus) ? null : SelectedStatus;
+            var (objName, cmdName, st, addr, isOut, bVal, msgSearch) = BuildFilterValues();
             var offset = (CurrentPage - 1) * PageSize;
 
             var results = await Task.Run(() =>
@@ -307,6 +320,10 @@ public sealed class RuntimeEventLogQueryViewModel : INotifyPropertyChanged, IDis
                     objName,
                     cmdName,
                     st,
+                    addr,
+                    isOut,
+                    bVal,
+                    msgSearch,
                     PageSize,
                     offset,
                     ct), ct);
@@ -369,6 +386,10 @@ public sealed class RuntimeEventLogQueryViewModel : INotifyPropertyChanged, IDis
         SelectedObjectName = null;
         SelectedCommandName = null;
         SelectedStatus = null;
+        SelectedAddressText = null;
+        SelectedIoOption = "All";
+        SelectedBoolValueOption = "All";
+        SelectedMessageSearch = null;
         TotalRows = 0;
         CurrentPage = 1;
         StatusText = "Cleared";
@@ -382,10 +403,27 @@ public sealed class RuntimeEventLogQueryViewModel : INotifyPropertyChanged, IDis
         SelectedObjectName = null;
         SelectedCommandName = null;
         SelectedStatus = null;
+        SelectedAddressText = null;
+        SelectedIoOption = "All";
+        SelectedBoolValueOption = "All";
+        SelectedMessageSearch = null;
         FromTime = DateTime.Now.AddMinutes(-30);
         ToTime = null;
         FromTimeText = FromTime?.ToString("yyyy-MM-dd HH:mm:ss") ?? "";
         ToTimeText = "";
+    }
+
+    /// <summary>从 UI 字符串转换为查询参数元组</summary>
+    private (string? objName, string? cmdName, string? status, int? address, bool? isOutput, bool? boolValue, string? messageSearch) BuildFilterValues()
+    {
+        var objName = string.IsNullOrWhiteSpace(SelectedObjectName) ? null : SelectedObjectName;
+        var cmdName = string.IsNullOrWhiteSpace(SelectedCommandName) ? null : SelectedCommandName;
+        var st = string.IsNullOrWhiteSpace(SelectedStatus) ? null : SelectedStatus;
+        var addr = !string.IsNullOrWhiteSpace(SelectedAddressText) && int.TryParse(SelectedAddressText, out var a) ? a : (int?)null;
+        var isOut = SelectedIoOption switch { "DI (Input)" => false, "DO (Output)" => true, _ => (bool?)null };
+        var bVal = SelectedBoolValueOption switch { "ON" => true, "OFF" => false, _ => (bool?)null };
+        var msgSearch = string.IsNullOrWhiteSpace(SelectedMessageSearch) ? null : SelectedMessageSearch;
+        return (objName, cmdName, st, addr, isOut, bVal, msgSearch);
     }
 
     private void SetTimeFilter(int minutes)
