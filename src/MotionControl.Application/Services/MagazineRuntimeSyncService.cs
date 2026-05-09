@@ -1,59 +1,68 @@
+using System.Linq;
 using MotionControl.Application.Interfaces;
 using MotionControl.Domain.Entities;
 using MotionControl.Infrastructure.Configuration;
 
 namespace MotionControl.Application.Services;
 
-public sealed class MagazineRuntimeSyncService(Machine machine) : IMagazineRuntimeSyncService
+public sealed class MagazineRuntimeSyncService(Machine machine)
+    : RuntimeSyncServiceBase<MagazineConfigItem, Magazine>(machine), IMagazineRuntimeSyncService
 {
-    public Task ApplyAsync(MagazineConfigItem magazine, CancellationToken cancellationToken = default)
+    public override Task ApplyAsync(MagazineConfigItem magazine, CancellationToken cancellationToken = default)
     {
-        EnsureIoPointExists(magazine.MaterialPresentInputAddress, false);
-        EnsureIoPointExists(magazine.CurrentLayerHasMaterialInputAddress, false);
-        EnsureIoPointExists(magazine.TrayKeyingInputAddress, false);
+        EnsureIoPointExists(magazine.MaterialPresentInputAddress, isOutput: false);
+        EnsureIoPointExists(magazine.CurrentLayerHasMaterialInputAddress, isOutput: false);
+        EnsureIoPointExists(magazine.TrayKeyingInputAddress, isOutput: false);
 
-        var existing = machine.Magazines.FirstOrDefault(item => string.Equals(item.Name, magazine.Name, StringComparison.OrdinalIgnoreCase));
+        var existing = FindExisting(magazine, m => m.Name);
         if (existing is null)
         {
-            var positions = magazine.Positions.Select(p => new MagazinePosition(p.Name, p.Description, string.IsNullOrWhiteSpace(p.Kind) ? MagazinePositionKinds.Normal : p.Kind, p.X, p.Y, p.Z));
-            var created = new Magazine(magazine.Name, magazine.Description, magazine.XAxisNo, magazine.YAxisNo, magazine.ZAxisNo, magazine.MaterialPresentInputAddress, magazine.CurrentLayerHasMaterialInputAddress, magazine.TrayKeyingInputAddress, magazine.LayerCount, magazine.LayerHeight, magazine.PickLiftHeight, magazine.ScanSettlingMs, positions);
+            var positions = magazine.Positions.Select(p => new MagazinePosition(
+                p.Name, p.Description,
+                string.IsNullOrWhiteSpace(p.Kind) ? MagazinePositionKinds.Normal : p.Kind,
+                p.X, p.Y, p.Z));
+            var created = new Magazine(
+                magazine.Name, magazine.Description,
+                magazine.XAxisNo, magazine.YAxisNo, magazine.ZAxisNo,
+                magazine.MaterialPresentInputAddress,
+                magazine.CurrentLayerHasMaterialInputAddress,
+                magazine.TrayKeyingInputAddress,
+                magazine.LayerCount, magazine.LayerHeight, magazine.PickLiftHeight, magazine.ScanSettlingMs,
+                positions);
             created.EnsureDefaultPositions();
-            machine.AddMagazine(created);
-            return Task.CompletedTask;
+            Machine.AddMagazine(created);
         }
-
-        existing.UpdateMetadata(magazine.Name, magazine.Description, magazine.XAxisNo, magazine.YAxisNo, magazine.ZAxisNo, magazine.MaterialPresentInputAddress, magazine.CurrentLayerHasMaterialInputAddress, magazine.TrayKeyingInputAddress, magazine.LayerCount, magazine.LayerHeight, magazine.PickLiftHeight, magazine.ScanSettlingMs);
-        existing.Positions.Clear();
-        foreach (var position in magazine.Positions)
+        else
         {
-            existing.Positions.Add(new MagazinePosition(
-                position.Name,
-                position.Description,
-                string.IsNullOrWhiteSpace(position.Kind) ? MagazinePositionKinds.Normal : position.Kind,
-                position.X,
-                position.Y,
-                position.Z));
+            existing.UpdateMetadata(
+                magazine.Name, magazine.Description,
+                magazine.XAxisNo, magazine.YAxisNo, magazine.ZAxisNo,
+                magazine.MaterialPresentInputAddress,
+                magazine.CurrentLayerHasMaterialInputAddress,
+                magazine.TrayKeyingInputAddress,
+                magazine.LayerCount, magazine.LayerHeight, magazine.PickLiftHeight, magazine.ScanSettlingMs);
+            existing.Positions.Clear();
+            foreach (var position in magazine.Positions)
+            {
+                existing.Positions.Add(new MagazinePosition(
+                    position.Name, position.Description,
+                    string.IsNullOrWhiteSpace(position.Kind) ? MagazinePositionKinds.Normal : position.Kind,
+                    position.X, position.Y, position.Z));
+            }
+            existing.EnsureDefaultPositions();
         }
-        existing.EnsureDefaultPositions();
         return Task.CompletedTask;
     }
 
-    public Task ReloadAsync(IEnumerable<MagazineConfigItem> magazines, CancellationToken cancellationToken = default)
+    protected override IEnumerable<Magazine> GetAllRuntime() => Machine.Magazines;
+
+    protected override string GetConfigName(MagazineConfigItem config) => config.Name;
+
+    public override Task RemoveAsync(string name, CancellationToken cancellationToken = default)
     {
-        foreach (var item in machine.Magazines.ToList()) machine.RemoveMagazine(item.Name);
-        foreach (var item in magazines) ApplyAsync(item, cancellationToken);
+        Machine.RemoveMagazine(name);
         return Task.CompletedTask;
     }
 
-    public Task RemoveAsync(string name, CancellationToken cancellationToken = default)
-    {
-        machine.RemoveMagazine(name);
-        return Task.CompletedTask;
-    }
-
-    private void EnsureIoPointExists(int address, bool isOutput)
-    {
-        if (address < 0 || machine.IoPoints.Any(item => item.IsOutput == isOutput && item.Address == address)) return;
-        machine.AddIoPoint(new IoPoint($"{(isOutput ? "DO" : "DI")} {address}", address, isOutput, "Auto-created for Magazine"));
-    }
+    protected override void RemoveRuntime(Magazine item) => Machine.RemoveMagazine(item.Name);
 }

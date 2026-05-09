@@ -9,7 +9,7 @@ public sealed class RuntimeEventLogEntry
     public DateTime TimestampUtc { get; init; } = DateTime.UtcNow;
     public string Module { get; init; } = string.Empty;
     public string EventType { get; init; } = string.Empty;
-    public string Level { get; init; } = "Info";
+    public string Level { get; init; } = RuntimeEventLevels.Info;
     public int? AxisNo { get; init; }
     public string? ObjectName { get; init; }
     public int? Address { get; init; }
@@ -24,25 +24,28 @@ public sealed class RuntimeEventLogEntry
 
     /// <summary>
     /// 根据 EventType 或 Status 判断日志级别。
-    /// 规则：Failed/Timeout/Conflict/Alarm/Error/Aborted → Error
+    /// 规则：EventFailed/EventTimeout/EventConflict/AlarmRaised/Error → Error
     ///        Warning/Degraded/Retrying → Warning
     ///        其他 → Info
     /// </summary>
     public static string DetermineLevel(string? status, string? eventType)
     {
-        var combined = $"{(status ?? "")}|{(eventType ?? "")}".ToUpperInvariant();
+        var s = status ?? "";
+        var e = eventType ?? "";
 
-        if (combined.Contains("FAILED") || combined.Contains("FAIL") ||
-            combined.Contains("ERROR") || combined.Contains("ERR") ||
-            combined.Contains("TIMEOUT") || combined.Contains("CONFLICT") ||
-            combined.Contains("ALARM") || combined.Contains("ABORTED") ||
-            combined.Contains("CRITICAL") || combined.Contains("FATAL"))
-            return "Error";
+        // 优先使用常量判断，确保字符串不会飘
+        if (s == RuntimeEventLevels.StatusFailed || e == RuntimeEventLevels.EventFailed
+            || s == RuntimeEventLevels.StatusStarted && e.Contains("Timeout")
+            || e == RuntimeEventLevels.EventTimeout || e == RuntimeEventLevels.EventConflict
+            || s == RuntimeEventLevels.StatusRaised && e.Contains("Alarm")
+            || s.Contains("Error") || e.Contains("Error")
+            || s.Contains("Timeout") || s.Contains("Critical") || s.Contains("Fatal"))
+            return RuntimeEventLevels.Error;
 
-        if (combined.Contains("WARNING") || combined.Contains("WARN") ||
-            combined.Contains("DEGRADED") || combined.Contains("RETRYING"))
-            return "Warning";
+        if (s.Contains("Warning") || s.Contains("Warn") || e.Contains("Warning")
+            || s.Contains("Degraded") || s.Contains("Retrying"))
+            return RuntimeEventLevels.Warning;
 
-        return "Info";
+        return RuntimeEventLevels.Info;
     }
 }

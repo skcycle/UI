@@ -14,6 +14,7 @@ public sealed class DashboardViewModel : INotifyPropertyChanged
     private readonly CommandFeedbackRuntimeState _commandFeedbackRuntimeState;
     private readonly IEventLogStore _eventLogStore;
     private EtherCatControllerStatus? _controllerStatus;
+    private const int DroppedAlarmThreshold = 100;
     private RuntimeEventLogItem[] _lastRecentCommandFeedback = Array.Empty<RuntimeEventLogItem>();
     private string[] _lastActiveAlarmSummary = Array.Empty<string>();
     private EtherCatSlaveViewModel[] _lastEtherCatSlaves = Array.Empty<EtherCatSlaveViewModel>();
@@ -56,6 +57,20 @@ public sealed class DashboardViewModel : INotifyPropertyChanged
         get => _recentPersistedErrors;
         private set { _recentPersistedErrors = value; OnPropertyChanged(); }
     }
+
+    /// <summary>事件日志健康状态：丢弃计数（超过阈值报警）</summary>
+    public long EventLogDroppedCount => _eventLogStore.DroppedCount;
+
+    /// <summary>事件日志健康状态：待写计数</summary>
+    public int EventLogPendingCount => _eventLogStore.PendingCount;
+
+    /// <summary>事件日志是否健康（无丢弃或丢弃在阈值内）</summary>
+    public bool IsEventLogHealthy => _eventLogStore.DroppedCount < DroppedAlarmThreshold;
+
+    /// <summary>事件日志健康状态文本，供 Dashboard UI 直接绑定</summary>
+    public string EventLogHealthText => IsEventLogHealthy
+        ? $"Dropped: {EventLogDroppedCount} | Pending: {EventLogPendingCount}"
+        : $"⚠ SYS-EVENTLOG-DROPPED: {EventLogDroppedCount} events lost | Pending: {EventLogPendingCount}";
 
     public async Task RefreshPersistedErrorsAsync(CancellationToken ct = default)
     {
@@ -154,5 +169,11 @@ public sealed class DashboardViewModel : INotifyPropertyChanged
             AlarmLog = latestAlarmLog;
             OnPropertyChanged(nameof(AlarmLog));
         }
+
+        // 事件日志健康状态（丢弃监控）
+        OnPropertyChanged(nameof(EventLogDroppedCount));
+        OnPropertyChanged(nameof(EventLogPendingCount));
+        OnPropertyChanged(nameof(IsEventLogHealthy));
+        OnPropertyChanged(nameof(EventLogHealthText));
     }
 }

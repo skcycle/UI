@@ -3,14 +3,15 @@ namespace MotionControl.Control.Services;
 public sealed class CommandFeedbackRuntimeState
 {
     private readonly object _syncLock = new();
-    private readonly IEventLogStore _eventLogStore;
+    private readonly IEventLogStore? _eventLogStore;
     private CommandFeedback[] _recentFeedback = Array.Empty<CommandFeedback>();
 
     public event Action? FeedbackChanged;
 
-    public CommandFeedbackRuntimeState() : this(null!) { }
-
-    public CommandFeedbackRuntimeState(IEventLogStore eventLogStore)
+    /// <summary>
+    /// 显式构造函数。允许传入 null（无持久化 Store），仅保留内存反馈。
+    /// </summary>
+    public CommandFeedbackRuntimeState(IEventLogStore? eventLogStore)
     {
         _eventLogStore = eventLogStore;
     }
@@ -39,20 +40,14 @@ public sealed class CommandFeedbackRuntimeState
                 && lastFeedback.Message == feedback.Message;
 
             if (isDuplicateAxisStateChange)
-            {
                 return;
-            }
 
             var newList = new CommandFeedback[Math.Min(_recentFeedback.Length + 1, 100)];
             var startIndex = _recentFeedback.Length >= 100 ? 1 : 0;
             if (_recentFeedback.Length >= 100)
-            {
                 Array.Copy(_recentFeedback, 1, newList, 0, 99);
-            }
             else
-            {
                 Array.Copy(_recentFeedback, 0, newList, 0, _recentFeedback.Length);
-            }
             newList[Math.Min(_recentFeedback.Length, 99)] = feedback;
             _recentFeedback = newList;
         }

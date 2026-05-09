@@ -5,10 +5,6 @@ using MotionControl.Infrastructure.Configuration;
 
 namespace MotionControl.Application.Services;
 
-/// <summary>
-/// 负责将 IO 配置同步到 Machine 的运行时对象。
-/// 这里只处理运行时模型的增删改，不负责配置文件持久化，也不负责 UI 刷新。
-/// </summary>
 public sealed class IoRuntimeSyncService(Machine machine) : IIoRuntimeSyncService
 {
     public Task ApplyAsync(IoPointConfigItem ioPoint, CancellationToken cancellationToken = default)
@@ -17,10 +13,11 @@ public sealed class IoRuntimeSyncService(Machine machine) : IIoRuntimeSyncServic
         if (existing is null)
         {
             machine.AddIoPoint(new IoPoint(ioPoint.Name, ioPoint.Address, ioPoint.IsOutput, ioPoint.Description));
-            return Task.CompletedTask;
         }
-
-        existing.UpdateMetadata(ioPoint.Name, ioPoint.Address, ioPoint.Description);
+        else
+        {
+            existing.UpdateMetadata(ioPoint.Name, ioPoint.Address, ioPoint.Description);
+        }
         return Task.CompletedTask;
     }
 
@@ -30,12 +27,10 @@ public sealed class IoRuntimeSyncService(Machine machine) : IIoRuntimeSyncServic
         {
             machine.RemoveIoPoint(ioPoint.IsOutput, ioPoint.Address);
         }
-
         foreach (var ioPoint in ioPoints)
         {
             machine.AddIoPoint(new IoPoint(ioPoint.Name, ioPoint.Address, ioPoint.IsOutput, ioPoint.Description));
         }
-
         return Task.CompletedTask;
     }
 

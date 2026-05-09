@@ -129,12 +129,14 @@ public sealed class SqliteEventLogStore : IEventLogStore, IDisposable
 
     // ── 排空 ──
 
-    public async Task FlushAsync(CancellationToken ct = default)
+    /// <summary>
+    /// 手动刷盘：排空 Channel 队列中所有待写事件，不关闭 Writer（仍可继续入队）。
+    /// </summary>
+    public async Task FlushPendingAsync(CancellationToken ct = default)
     {
-        _channel.Writer.Complete();
         var remaining = new List<RuntimeEventLogEntry>();
 
-        await foreach (var entry in _channel.Reader.ReadAllAsync(ct))
+        while (_channel.Reader.TryRead(out var entry))
         {
             remaining.Add(entry);
         }
@@ -147,6 +149,15 @@ public sealed class SqliteEventLogStore : IEventLogStore, IDisposable
             }
             _logger.LogInformation("Flushed {Count} pending events on demand", remaining.Count);
         }
+    }
+
+    /// <summary>
+    /// 停机专用：标记 Writer 关闭，排空剩余事件，写入后不再可写。
+    /// </summary>
+    public async Task CompleteAndDrainAsync(CancellationToken ct = default)
+    {
+        _channel.Writer.Complete();
+        await DrainRemainingAsync(ct);
     }
 
     // ── 消费者 ──
@@ -188,7 +199,7 @@ public sealed class SqliteEventLogStore : IEventLogStore, IDisposable
             catch (Exception ex) { _logger.LogError(ex, "Event log consumer error"); }
         }
 
-        await DrainRemainingAsync();
+        await DrainRemainingAsync(ct);
     }
 
     private void DumpDroppedSummary()
@@ -259,13 +270,12 @@ public sealed class SqliteEventLogStore : IEventLogStore, IDisposable
         await tx.CommitAsync(ct);
     }
 
-    private async Task DrainRemainingAsync()
+    private async Task DrainRemainingAsync(CancellationToken ct)
     {
         try
         {
-            _channel.Writer.Complete();
             var remaining = new List<RuntimeEventLogEntry>();
-            await foreach (var entry in _channel.Reader.ReadAllAsync())
+            await foreach (var entry in _channel.Reader.ReadAllAsync(ct))
             {
                 remaining.Add(entry);
             }
@@ -274,11 +284,12 @@ public sealed class SqliteEventLogStore : IEventLogStore, IDisposable
             {
                 foreach (var chunk in remaining.Chunk(BatchWriteSize))
                 {
-                    await WriteBatchAsync(chunk.ToList(), CancellationToken.None);
+                    await WriteBatchAsync(chunk.ToList(), ct);
                 }
                 _logger.LogInformation("Drained {Count} remaining event log entries on shutdown", remaining.Count);
             }
         }
+        catch (OperationCanceledException) { /* expected on shutdown */ }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error draining event log on shutdown");
@@ -547,3 +558,10 @@ public sealed class SqliteEventLogStore : IEventLogStore, IDisposable
         _cts.Dispose();
     }
 }
+
+// ── 停机流程说明 ──
+// Consumer 在收到 CancellationToken 时，会在循环退出后调用 DrainRemainingAsync(ct)（内部不再 Complete）。
+// 若主动调用 CompleteAndDrainAsync()（应用主动关闭），则直接排空并退出。
+// Dispose() 触发 _cts.Cancel()，Consumer 退出循环后调用 DrainRemainingAsync(_cts.Token)。
+// 错误修复：旧版 FlushAsync() 误将 _channel.Writer.Complete() 放在内部，导致 flush 后 Store 不可写。
+// 错误修复：旧版 DrainRemainingAsync() 重复调用 Complete()，语义不干净。

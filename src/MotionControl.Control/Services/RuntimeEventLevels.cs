@@ -68,4 +68,109 @@ public static class RuntimeEventLevels
     public const string StatusRequested = "Requested";
     public const string StatusTriggered = "Triggered";
     public const string StatusForceReset = "ForceReset";
+
+    // ── 枚举 ⇄ 字符串 转换 ────────────────────────────────────
+
+    public static RuntimeEventLevel ToLevel(string? level)
+        => level switch
+        {
+            Error   => RuntimeEventLevel.Error,
+            Warning => RuntimeEventLevel.Warning,
+            Critical => RuntimeEventLevel.Critical,
+            _       => RuntimeEventLevel.Info
+        };
+
+    public static string ToLevelString(RuntimeEventLevel level)
+        => level switch
+        {
+            RuntimeEventLevel.Error    => Error,
+            RuntimeEventLevel.Warning  => Warning,
+            RuntimeEventLevel.Critical => Critical,
+            _                          => Info
+        };
+
+    public static RuntimeEventType? TryParseEventType(string? s)
+    {
+        if (s is null) return null;
+        return s switch
+        {
+            EventCommand      => RuntimeEventType.Command,
+            EventSucceeded    => RuntimeEventType.Succeeded,
+            EventFailed       => RuntimeEventType.Failed,
+            EventRecovered    => RuntimeEventType.Recovered,
+            EventTimeout      => RuntimeEventType.Timeout,
+            EventConflict     => RuntimeEventType.Conflict,
+            EventChanged      => RuntimeEventType.Changed,
+            EventScan         => RuntimeEventType.Scan,
+            EventScanSummary  => RuntimeEventType.ScanSummary,
+            EventTeach        => RuntimeEventType.Teach,
+            EventAlarmCleared => RuntimeEventType.AlarmCleared,
+            _                 => null
+        };
+    }
+
+    public static string ToEventTypeString(RuntimeEventType t)
+        => t switch
+        {
+            RuntimeEventType.Command      => EventCommand,
+            RuntimeEventType.Succeeded    => EventSucceeded,
+            RuntimeEventType.Failed       => EventFailed,
+            RuntimeEventType.Recovered    => EventRecovered,
+            RuntimeEventType.Timeout      => EventTimeout,
+            RuntimeEventType.Conflict     => EventConflict,
+            RuntimeEventType.Changed      => EventChanged,
+            RuntimeEventType.Scan         => EventScan,
+            RuntimeEventType.ScanSummary  => EventScanSummary,
+            RuntimeEventType.Teach        => EventTeach,
+            RuntimeEventType.AlarmCleared => EventAlarmCleared,
+            _                             => EventCommand
+        };
+
+    public static RuntimeEventStatus? TryParseStatus(string? s)
+        => s switch
+        {
+            StatusStarted    => RuntimeEventStatus.Started,
+            StatusSucceeded => RuntimeEventStatus.Succeeded,
+            StatusFailed    => RuntimeEventStatus.Failed,
+            StatusRaised    => RuntimeEventStatus.Raised,
+            StatusCleared   => RuntimeEventStatus.Cleared,
+            StatusRunning   => RuntimeEventStatus.Running,
+            StatusReady     => RuntimeEventStatus.Ready,
+            StatusLost      => RuntimeEventStatus.Lost,
+            StatusRequested => RuntimeEventStatus.Requested,
+            StatusTriggered => RuntimeEventStatus.Triggered,
+            StatusForceReset => RuntimeEventStatus.ForceReset,
+            _               => null
+        };
+
+    public static string ToStatusString(RuntimeEventStatus s)
+        => s switch
+        {
+            RuntimeEventStatus.Started    => StatusStarted,
+            RuntimeEventStatus.Succeeded => StatusSucceeded,
+            RuntimeEventStatus.Failed    => StatusFailed,
+            RuntimeEventStatus.Raised    => StatusRaised,
+            RuntimeEventStatus.Cleared   => StatusCleared,
+            RuntimeEventStatus.Running   => StatusRunning,
+            RuntimeEventStatus.Ready     => StatusReady,
+            RuntimeEventStatus.Lost      => StatusLost,
+            RuntimeEventStatus.Requested => StatusRequested,
+            RuntimeEventStatus.Triggered => StatusTriggered,
+            RuntimeEventStatus.ForceReset => StatusForceReset,
+            _                           => StatusStarted
+        };
+
+    public static RuntimeEventModule TryParseModule(string? module)
+        => module switch
+        {
+            "System"        => RuntimeEventModule.System,
+            "Controller"    => RuntimeEventModule.Controller,
+            "Axis"          => RuntimeEventModule.Axis,
+            "Io"            => RuntimeEventModule.Io,
+            "Cylinder"      => RuntimeEventModule.Cylinder,
+            "Magazine"      => RuntimeEventModule.Magazine,
+            "WorkHead"      => RuntimeEventModule.WorkHead,
+            "PositionSetup" => RuntimeEventModule.PositionSetup,
+            _               => RuntimeEventModule.Unknown
+        };
 }

@@ -13,6 +13,24 @@ using MotionControl.Presentation.Commands;
 namespace MotionControl.Presentation.ViewModels;
 
 /// <summary>
+/// 保存的筛选模板条目
+/// </summary>
+public sealed class SavedFilterEntry
+{
+    public string Name { get; init; } = string.Empty;
+    public DateTime? FromTime { get; init; }
+    public DateTime? ToTime { get; init; }
+    public string? Module { get; init; }
+    public int? AxisNo { get; init; }
+    public string? Level { get; init; }
+    public string? ObjectName { get; init; }
+    public string? CommandName { get; init; }
+    public string? Status { get; init; }
+    public string? MessageSearch { get; init; }
+    public override string ToString() => Name;
+}
+
+/// <summary>
 /// SQLite 事件日志查询 ViewModel（第二轮优化版）。
 /// 支持动态模块/轴过滤、快捷筛选、详情面板、导出、诊断操作。
 /// </summary>
@@ -55,6 +73,12 @@ public sealed class RuntimeEventLogQueryViewModel : INotifyPropertyChanged, IDis
         OnlyErrorsCommand = new RelayCommand(() => { SelectedLevel = "Error"; SelectedModule = null; });
         OnlyWarningsCommand = new RelayCommand(() => { SelectedLevel = "Warning"; SelectedModule = null; });
         ClearFiltersCommand = new RelayCommand(ClearFilters);
+        ExportAllResultsCommand = new RelayCommand(async () => await ExportAllResultsAsync());
+        TraceModuleCommand = new RelayCommand<string?>(TraceModule);
+        TraceObjectCommand = new RelayCommand<string?>(TraceObject);
+        SaveFilterCommand = new RelayCommand(SaveCurrentFilter, () => !string.IsNullOrWhiteSpace(SavedFilterName));
+        LoadFilterCommand = new RelayCommand<SavedFilterEntry>(LoadFilter);
+        DeleteFilterCommand = new RelayCommand<SavedFilterEntry>(DeleteFilter);
 
         // Load module list from DB on first query
         _ = LoadModuleOptionsAsync();
@@ -171,6 +195,14 @@ public sealed class RuntimeEventLogQueryViewModel : INotifyPropertyChanged, IDis
     public string? SelectedEventJson => FormatJson(_selectedEvent?.PayloadJson);
 
     private string _statusText = "Ready";
+
+    // ── 保存的筛选模板 ──────────────────────────────────────
+
+    private string _savedFilterName = "";
+    public string SavedFilterName { get => _savedFilterName; set { _savedFilterName = value; OnPropertyChanged(); } }
+
+    private ObservableCollection<SavedFilterEntry> _savedFilters = new();
+    public ObservableCollection<SavedFilterEntry> SavedFilters { get => _savedFilters; set { _savedFilters = value; OnPropertyChanged(); } }
     public string StatusText { get => _statusText; set { _statusText = value; OnPropertyChanged(); } }
 
     private bool _isLoading;
@@ -217,6 +249,12 @@ public sealed class RuntimeEventLogQueryViewModel : INotifyPropertyChanged, IDis
     public ICommand OnlyErrorsCommand { get; }
     public ICommand OnlyWarningsCommand { get; }
     public ICommand ClearFiltersCommand { get; }
+    public ICommand ExportAllResultsCommand { get; }
+    public ICommand TraceModuleCommand { get; }
+    public ICommand TraceObjectCommand { get; }
+    public ICommand SaveFilterCommand { get; }
+    public ICommand LoadFilterCommand { get; }
+    public ICommand DeleteFilterCommand { get; }
 
     // ── 查询 ───────────────────────────────────────────────────
 
@@ -247,10 +285,9 @@ public sealed class RuntimeEventLogQueryViewModel : INotifyPropertyChanged, IDis
 
             var (objName, cmdName, st, addr, isOut, bVal, msgSearch) = BuildFilterValues();
 
-            var countTask = Task.Run(() =>
-                _eventLogStore.QueryCountAsync(fromUtc, toUtc, module, SelectedAxisNo, level, objName, cmdName, st, addr, isOut, bVal, msgSearch, ct), ct);
-            var resultsTask = Task.Run(() =>
-                _eventLogStore.QueryAsync(fromUtc, toUtc, module, SelectedAxisNo, level, objName, cmdName, st, addr, isOut, bVal, msgSearch, PageSize, 0, ct), ct);
+            // 直接并发 await，SQLite 操作本身已经是 async，不需要再包 Task.Run
+            var countTask = _eventLogStore.QueryCountAsync(fromUtc, toUtc, module, SelectedAxisNo, level, objName, cmdName, st, addr, isOut, bVal, msgSearch, ct);
+            var resultsTask = _eventLogStore.QueryAsync(fromUtc, toUtc, module, SelectedAxisNo, level, objName, cmdName, st, addr, isOut, bVal, msgSearch, PageSize, 0, ct);
 
             await Task.WhenAll(countTask, resultsTask);
             ct.ThrowIfCancellationRequested();
@@ -310,23 +347,22 @@ public sealed class RuntimeEventLogQueryViewModel : INotifyPropertyChanged, IDis
             var (objName, cmdName, st, addr, isOut, bVal, msgSearch) = BuildFilterValues();
             var offset = (CurrentPage - 1) * PageSize;
 
-            var results = await Task.Run(() =>
-                _eventLogStore.QueryAsync(
-                    FromTime?.ToUniversalTime(),
-                    ToTime?.ToUniversalTime(),
-                    module,
-                    SelectedAxisNo,
-                    level,
-                    objName,
-                    cmdName,
-                    st,
-                    addr,
-                    isOut,
-                    bVal,
-                    msgSearch,
-                    PageSize,
-                    offset,
-                    ct), ct);
+            var results = await _eventLogStore.QueryAsync(
+                FromTime?.ToUniversalTime(),
+                ToTime?.ToUniversalTime(),
+                module,
+                SelectedAxisNo,
+                level,
+                objName,
+                cmdName,
+                st,
+                addr,
+                isOut,
+                bVal,
+                msgSearch,
+                PageSize,
+                offset,
+                ct);
 
             Events = new ObservableCollection<RuntimeEventLogItemViewModel>(
                 results.Select(e => new RuntimeEventLogItemViewModel(e)));
@@ -547,6 +583,130 @@ public sealed class RuntimeEventLogQueryViewModel : INotifyPropertyChanged, IDis
             return JsonSerializer.Serialize(doc, new JsonSerializerOptions { WriteIndented = true });
         }
         catch { return json; }
+    }
+
+    /// <summary>
+    /// 从 Dashboard 错误追踪：设置模块 + 最近 24h Error/Warning 筛选
+    /// </summary>
+    public void TraceModule(string? module)
+    {
+        if (string.IsNullOrWhiteSpace(module)) return;
+        ClearFilters();
+        SelectedModule = module;
+        SelectedLevel = "Error";
+        FromTime = DateTime.Now.AddHours(-24);
+        ToTime = null;
+        FromTimeText = FromTime?.ToString("yyyy-MM-dd HH:mm:ss") ?? "";
+        ToTimeText = "";
+        _ = SearchAsync();
+    }
+
+    /// <summary>
+    /// 从 Dashboard 追踪某个对象的完整操作链
+    /// </summary>
+    public void TraceObject(string? objectName)
+    {
+        if (string.IsNullOrWhiteSpace(objectName)) return;
+        ClearFilters();
+        SelectedObjectName = objectName;
+        FromTime = DateTime.Now.AddHours(-24);
+        ToTime = null;
+        FromTimeText = FromTime?.ToString("yyyy-MM-dd HH:mm:ss") ?? "";
+        ToTimeText = "";
+        _ = SearchAsync();
+    }
+
+    /// <summary>
+    /// 导出当前筛选条件的全部结果（不受分页限制）
+    /// </summary>
+    public async Task ExportAllResultsAsync()
+    {
+        if (TotalRows == 0) { StatusText = "No results to export"; return; }
+        if (TotalRows > 50_000) { StatusText = "⚠ Too many results (>50k), please narrow the filter first."; return; }
+
+        IsLoading = true;
+        StatusText = $"Exporting {TotalRows} results...";
+        try
+        {
+            var module = string.IsNullOrEmpty(SelectedModule) || SelectedModule == "All" ? null : SelectedModule;
+            var level = string.IsNullOrEmpty(SelectedLevel) || SelectedLevel == "All" ? null : SelectedLevel;
+            var (objName, cmdName, st, addr, isOut, bVal, msgSearch) = BuildFilterValues();
+
+            // 批量获取所有结果（一次查询最多 50000 条）
+            var allResults = await _eventLogStore.QueryAsync(
+                FromTime?.ToUniversalTime(), ToTime?.ToUniversalTime(),
+                module, SelectedAxisNo, level, objName, cmdName, st, addr, isOut, bVal, msgSearch,
+                maxRows: 50_000, offset: null);
+
+            var sb = new StringBuilder();
+            sb.AppendLine("Timestamp,Module,EventType,Level,AxisNo,ObjectName,Address,IO,CommandName,Status,Message,PayloadJson");
+            foreach (var e in allResults)
+                sb.AppendLine($"\"{e.TimestampUtc:yyyy-MM-dd HH:mm:ss}\",\"{e.Module}\",\"{e.EventType}\",\"{e.Level}\",\"{e.AxisNo}\",\"{e.ObjectName}\",\"{e.Address}\",\"{e.IsOutput}\",\"{e.CommandName}\",\"{e.Status}\",\"{EscapeCsv(e.Message)}\",\"{EscapeCsv(e.PayloadJson)}\"");
+
+            await SaveFileAsync(sb.ToString(), "event_log_full.csv", "CSV files (*.csv)|*.csv");
+            StatusText = $"Exported {allResults.Count} results";
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Export all results failed");
+            StatusText = $"Export error: {ex.Message}";
+        }
+        finally { IsLoading = false; }
+    }
+
+    /// <summary>
+    /// 保存当前筛选条件为命名模板
+    /// </summary>
+    public void SaveCurrentFilter()
+    {
+        if (string.IsNullOrWhiteSpace(SavedFilterName)) return;
+        if (SavedFilters.Any(f => f.Name == SavedFilterName))
+        { StatusText = $"Filter '{SavedFilterName}' already exists"; return; }
+        SavedFilters.Add(new SavedFilterEntry
+        {
+            Name = SavedFilterName,
+            FromTime = FromTime,
+            ToTime = ToTime,
+            Module = SelectedModule,
+            AxisNo = SelectedAxisNo,
+            Level = SelectedLevel,
+            ObjectName = SelectedObjectName,
+            CommandName = SelectedCommandName,
+            Status = SelectedStatus,
+            MessageSearch = SelectedMessageSearch
+        });
+        StatusText = $"Filter '{SavedFilterName}' saved";
+    }
+
+    /// <summary>
+    /// 加载已保存的筛选模板
+    /// </summary>
+    public void LoadFilter(SavedFilterEntry? filter)
+    {
+        if (filter == null) return;
+        FromTime = filter.FromTime;
+        ToTime = filter.ToTime;
+        FromTimeText = filter.FromTime?.ToString("yyyy-MM-dd HH:mm:ss") ?? "";
+        ToTimeText = filter.ToTime?.ToString("yyyy-MM-dd HH:mm:ss") ?? "";
+        SelectedModule = filter.Module;
+        SelectedAxisNo = filter.AxisNo;
+        SelectedLevel = filter.Level;
+        SelectedObjectName = filter.ObjectName;
+        SelectedCommandName = filter.CommandName;
+        SelectedStatus = filter.Status;
+        SelectedMessageSearch = filter.MessageSearch;
+        StatusText = $"Loaded filter: {filter.Name}";
+        _ = SearchAsync();
+    }
+
+    /// <summary>
+    /// 删除已保存的筛选模板
+    /// </summary>
+    public void DeleteFilter(SavedFilterEntry? filter)
+    {
+        if (filter == null) return;
+        SavedFilters.Remove(filter);
+        StatusText = $"Deleted filter: {filter.Name}";
     }
 
     private void RefreshDiagnostics()

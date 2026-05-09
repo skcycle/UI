@@ -5,37 +5,54 @@ using MotionControl.Infrastructure.Configuration;
 
 namespace MotionControl.Application.Services;
 
-public sealed class AxisParameterAppService(string appSettingsPath) : IAxisParameterAppService
+/// <summary>
+/// 使用 AppSettingsRepository 统一配置文件读写，支持原子写入（掉电安全）。
+/// </summary>
+public sealed class AxisParameterAppService : IAxisParameterAppService
 {
+    private readonly AppSettingsRepository _repo;
+
+    private static readonly JsonSerializerOptions JsonOptions = new()
+    {
+        PropertyNameCaseInsensitive = true,
+        WriteIndented = true,
+        Converters = { new JsonStringEnumConverter() }
+    };
+
+    public AxisParameterAppService(string appSettingsPath)
+    {
+        _repo = new AppSettingsRepository(appSettingsPath);
+    }
+
     public async Task<List<AxisMappingItem>> LoadAllAxesAsync(CancellationToken cancellationToken = default)
     {
-        var root = await LoadRootAsync(cancellationToken);
+        var root = await _repo.LoadAsync<AppSettingsRoot>(cancellationToken);
         return root.AxisMapping.Axes.ToList();
     }
 
     public async Task SaveAllAxesAsync(List<AxisMappingItem> items, CancellationToken cancellationToken = default)
     {
-        var root = await LoadRootAsync(cancellationToken);
+        var root = await _repo.LoadAsync<AppSettingsRoot>(cancellationToken);
         root.AxisMapping.Axes = items;
-        await SaveRootAsync(root, cancellationToken);
+        await _repo.SaveAsync(root, cancellationToken);
     }
 
     public async Task<AxisMappingItem?> LoadAxisParametersAsync(int axisNo, CancellationToken cancellationToken = default)
     {
-        var root = await LoadRootAsync(cancellationToken);
+        var root = await _repo.LoadAsync<AppSettingsRoot>(cancellationToken);
         return root.AxisMapping.Axes.FirstOrDefault(axis => axis.AxisNo == axisNo);
     }
 
-    public async Task SaveAxisParametersAsync(AxisMappingItem axisMappingItem, CancellationToken cancellationToken = default)
+    public async Task SaveAxisParametersAsync(AxisMappingItem item, CancellationToken cancellationToken = default)
     {
-        var root = await LoadRootAsync(cancellationToken);
-        SaveAxisParameters(root, axisMappingItem);
-        await SaveRootAsync(root, cancellationToken);
+        var root = await _repo.LoadAsync<AppSettingsRoot>(cancellationToken);
+        SaveAxisParameters(root, item);
+        await _repo.SaveAsync(root, cancellationToken);
     }
 
     public async Task<AxisMappingItem> AddAxisAsync(CancellationToken cancellationToken = default)
     {
-        var root = await LoadRootAsync(cancellationToken);
+        var root = await _repo.LoadAsync<AppSettingsRoot>(cancellationToken);
         var nextAxisNo = root.AxisMapping.Axes.Count == 0 ? 0 : root.AxisMapping.Axes.Max(axis => axis.AxisNo) + 1;
         var axis = new AxisMappingItem
         {
@@ -51,99 +68,46 @@ public sealed class AxisParameterAppService(string appSettingsPath) : IAxisParam
             HomeMode = MotionControl.Domain.Enums.HomeMode.Default,
             ServoBinding = string.Empty
         };
-
         SaveAxisParameters(root, axis);
-        await SaveRootAsync(root, cancellationToken);
+        await _repo.SaveAsync(root, cancellationToken);
         return axis;
     }
 
     public async Task<bool> DeleteAxisAsync(int axisNo, CancellationToken cancellationToken = default)
     {
-        var root = await LoadRootAsync(cancellationToken);
+        var root = await _repo.LoadAsync<AppSettingsRoot>(cancellationToken);
         var removed = root.AxisMapping.Axes.RemoveAll(axis => axis.AxisNo == axisNo) > 0;
-        if (!removed)
-        {
-            return false;
-        }
-
+        if (!removed) return false;
         if (root.AxisMapping.AxisNames.Count > axisNo)
-        {
             root.AxisMapping.AxisNames[axisNo] = $"Axis {axisNo}";
-        }
-
-        await SaveRootAsync(root, cancellationToken);
+        await _repo.SaveAsync(root, cancellationToken);
         return true;
     }
 
-    private static void SaveAxisParameters(AppSettingsRoot root, AxisMappingItem axisMappingItem)
+    private static void SaveAxisParameters(AppSettingsRoot root, AxisMappingItem item)
     {
-        var existing = root.AxisMapping.Axes.FirstOrDefault(axis => axis.AxisNo == axisMappingItem.AxisNo);
+        var existing = root.AxisMapping.Axes.FirstOrDefault(a => a.AxisNo == item.AxisNo);
         if (existing is null)
         {
-            root.AxisMapping.Axes.Add(axisMappingItem);
+            root.AxisMapping.Axes.Add(item);
         }
         else
         {
-            existing.Name = axisMappingItem.Name;
-            existing.Group = axisMappingItem.Group;
-            existing.IsMaster = axisMappingItem.IsMaster;
-            existing.MasterAxisName = axisMappingItem.MasterAxisName;
-            existing.SoftLimitPositive = axisMappingItem.SoftLimitPositive;
-            existing.SoftLimitNegative = axisMappingItem.SoftLimitNegative;
-            existing.WorkVelocity = axisMappingItem.WorkVelocity;
-            existing.SetupVelocity = axisMappingItem.SetupVelocity;
-            existing.PulseEquivalent = axisMappingItem.PulseEquivalent;
-            existing.HomeMode = axisMappingItem.HomeMode;
-            existing.ServoBinding = axisMappingItem.ServoBinding;
+            existing.Name = item.Name;
+            existing.Group = item.Group;
+            existing.IsMaster = item.IsMaster;
+            existing.MasterAxisName = item.MasterAxisName;
+            existing.SoftLimitPositive = item.SoftLimitPositive;
+            existing.SoftLimitNegative = item.SoftLimitNegative;
+            existing.WorkVelocity = item.WorkVelocity;
+            existing.SetupVelocity = item.SetupVelocity;
+            existing.PulseEquivalent = item.PulseEquivalent;
+            existing.HomeMode = item.HomeMode;
+            existing.ServoBinding = item.ServoBinding;
         }
 
-        if (root.AxisMapping.AxisNames.Count <= axisMappingItem.AxisNo)
-        {
-            while (root.AxisMapping.AxisNames.Count <= axisMappingItem.AxisNo)
-            {
-                root.AxisMapping.AxisNames.Add($"Axis {root.AxisMapping.AxisNames.Count}");
-            }
-        }
-
-        root.AxisMapping.AxisNames[axisMappingItem.AxisNo] = axisMappingItem.Name;
-    }
-
-    private async Task SaveRootAsync(AppSettingsRoot root, CancellationToken cancellationToken)
-    {
-        var json = JsonSerializer.Serialize(root, new JsonSerializerOptions { WriteIndented = true });
-        await File.WriteAllTextAsync(appSettingsPath, json, cancellationToken);
-    }
-
-    private async Task<AppSettingsRoot> LoadRootAsync(CancellationToken cancellationToken)
-    {
-        if (!File.Exists(appSettingsPath))
-        {
-            throw new FileNotFoundException($"App settings file not found: {appSettingsPath}");
-        }
-
-        var json = await File.ReadAllTextAsync(appSettingsPath, cancellationToken);
-        return JsonSerializer.Deserialize<AppSettingsRoot>(json, new JsonSerializerOptions
-        {
-            PropertyNameCaseInsensitive = true,
-            Converters = { new JsonStringEnumConverter() }
-        }) ?? new AppSettingsRoot();
-    }
-
-    private sealed class AppSettingsRoot
-    {
-        public ZmcControllerConfig ZmcController { get; set; } = new();
-        public AxisMappingOptions AxisMapping { get; set; } = new();
-        public IoMappingOptions IoMapping { get; set; } = new();
-        public CylinderMappingOptions CylinderMapping { get; set; } = new();
-        public MagazineMappingOptions MagazineMapping { get; set; } = new();
-        public WorkHeadMappingOptions WorkHeadMapping { get; set; } = new();
-        public PositionSetupMappingOptions PositionSetupMapping { get; set; } = new();
-    }
-
-    private sealed class ZmcControllerConfig
-    {
-        public string IpAddress { get; set; } = "127.0.0.1";
-        public int AxisCount { get; set; } = 32;
-        public int PollingIntervalMs { get; set; } = 200;
+        while (root.AxisMapping.AxisNames.Count <= item.AxisNo)
+            root.AxisMapping.AxisNames.Add($"Axis {root.AxisMapping.AxisNames.Count}");
+        root.AxisMapping.AxisNames[item.AxisNo] = item.Name;
     }
 }

@@ -127,6 +127,6 @@ public sealed class SystemAppService(
 
     public async Task FlushEventLogAsync(CancellationToken cancellationToken = default)
     {
-        await eventLogStore.FlushAsync(cancellationToken);
+        await eventLogStore.CompleteAndDrainAsync(cancellationToken);
     }
 }

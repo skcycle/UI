@@ -52,8 +52,11 @@ public interface IEventLogStore
     /// <summary>删除指定时间之前的记录</summary>
     Task<int> DeleteOlderThanAsync(DateTime cutoffUtc, CancellationToken ct = default);
 
-    /// <summary>排空 Channel 中剩余事件，用于优雅关闭</summary>
-    Task FlushAsync(CancellationToken ct = default);
+    /// <summary>手动刷盘：排空 Channel 队列中所有待写事件，不关闭 Writer（仍可继续入队）。</summary>
+    Task FlushPendingAsync(CancellationToken ct = default);
+
+    /// <summary>停机专用：标记 Writer 关闭，排空剩余事件，写入后不再可写。</summary>
+    Task CompleteAndDrainAsync(CancellationToken ct = default);
 
     /// <summary>Channel 满时被丢弃的事件总数</summary>
     long DroppedCount { get; }

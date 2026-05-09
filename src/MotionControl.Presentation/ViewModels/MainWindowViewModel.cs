@@ -46,11 +46,17 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IOperationStat
     private readonly IDialogService _dialogService;
     private readonly AxisConsoleCoordinator _axisConsoleCoordinator;
     private readonly IoMonitorCoordinator _ioMonitorCoordinator;
+    private readonly MagazineCoordinator _magazineCoordinator;
+    private readonly WorkHeadCoordinator _workHeadCoordinator;
+    private readonly CylinderCoordinator _cylinderCoordinator;
+    private readonly PositionSetupCoordinator _positionSetupCoordinator;
     private readonly CommandFeedbackRuntimeState _commandFeedbackRuntimeState;
     private readonly CylinderEventRuntimeState _cylinderEventRuntimeState;
     private readonly MagazineEventRuntimeState _magazineEventRuntimeState;
     private readonly PositionSetupEventRuntimeState _positionSetupEventRuntimeState;
     private readonly WorkHeadEventRuntimeState _workHeadEventRuntimeState;
+    // 用于 PositionSetupMonitor.SelectedItem 事件订阅，防止重复绑定
+    private PositionSetupItemViewModel? _lastPositionSetupSelectedItem;
     private readonly ControllerRuntimeState _controllerRuntimeState;
     private readonly Device.Abstractions.Controllers.IAxisMotionController _motionController;
     private readonly IEventLogStore _eventLogQueryService;
@@ -145,65 +151,31 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IOperationStat
         WorkHeadEventLog = new WorkHeadEventLogViewModel(workHeadEventRuntimeState);
         PositionSetupEventLog = new PositionSetupEventLogViewModel(positionSetupEventRuntimeState);
         CylinderMonitor = new CylinderMonitorViewModel(machine, ioControlService, cylinderEventRuntimeState, CanWriteIoOutputs);
-        CylinderMonitor.SelectedCylinderChanged += _ => (DeleteCylinderCommand as RelayCommand)?.RaiseCanExecuteChanged();
         MagazineMonitor = new MagazineMonitorViewModel(machine);
-        MagazineMonitor.PropertyChanged += (_, e) =>
-        {
-            if (e.PropertyName == nameof(MagazineMonitorViewModel.SelectedMagazine))
-            {
-                (DeleteMagazineCommand as RelayCommand)?.RaiseCanExecuteChanged();
-                (AddMagazinePositionCommand as RelayCommand)?.RaiseCanExecuteChanged();
-                (DeleteMagazinePositionCommand as RelayCommand)?.RaiseCanExecuteChanged();
-                (TeachMagazinePositionCommand as RelayCommand)?.RaiseCanExecuteChanged();
-                (MoveMagazinePositionCommand as RelayCommand)?.RaiseCanExecuteChanged();
-                (ScanMagazineCommand as RelayCommand)?.RaiseCanExecuteChanged();
-            }
-        };
-        MagazineMonitor.SelectedMagazinePositionChanged += () =>
-        {
-            (DeleteMagazinePositionCommand as RelayCommand)?.RaiseCanExecuteChanged();
-            (TeachMagazinePositionCommand as RelayCommand)?.RaiseCanExecuteChanged();
-            (MoveMagazinePositionCommand as RelayCommand)?.RaiseCanExecuteChanged();
-            (ScanMagazineCommand as RelayCommand)?.RaiseCanExecuteChanged();
-        };
         WorkHeadMonitor = new WorkHeadMonitorViewModel(machine, ioControlService, motionAppService, workHeadEventRuntimeState, CanWriteIoOutputs);
-        WorkHeadMonitor.PropertyChanged += (_, e) =>
-        {
-            if (e.PropertyName == nameof(WorkHeadMonitorViewModel.SelectedWorkHead))
-            {
-                (DeleteWorkHeadCommand as RelayCommand)?.RaiseCanExecuteChanged();
-                (AddWorkHeadPositionCommand as RelayCommand)?.RaiseCanExecuteChanged();
-                (DeleteWorkHeadPositionCommand as RelayCommand)?.RaiseCanExecuteChanged();
-            }
-        };
         PositionSetupMonitor = new PositionSetupMonitorViewModel();
         PositionSetupMonitor.PropertyChanged += (_, e) =>
         {
             if (e.PropertyName == nameof(PositionSetupMonitorViewModel.SelectedItem))
             {
-                // 订阅新的 PositionSetupItemViewModel 的 HasSelectedPositionChanged
+                // 先解绑旧的 PositionSetupItemViewModel 事件，防止重复订阅
+                if (_lastPositionSetupSelectedItem != null)
+                {
+                    _lastPositionSetupSelectedItem.HasSelectedPositionChanged -= OnPositionSetupSelectedPositionChanged;
+                }
+
+                // 订阅新的 PositionSetupItemViewModel
                 if (PositionSetupMonitor.SelectedItem != null)
                 {
-                    PositionSetupMonitor.SelectedItem.HasSelectedPositionChanged += () =>
-                    {
-                        (DeletePositionSetupCommand as RelayCommand)?.RaiseCanExecuteChanged();
-                        (AddPositionSetupPositionCommand as RelayCommand)?.RaiseCanExecuteChanged();
-                        (DeletePositionSetupPositionCommand as RelayCommand)?.RaiseCanExecuteChanged();
-                        (TeachPositionSetupCommand as RelayCommand)?.RaiseCanExecuteChanged();
-                        (MovePositionSetupCommand as RelayCommand)?.RaiseCanExecuteChanged();
-                    };
+                    PositionSetupMonitor.SelectedItem.HasSelectedPositionChanged += OnPositionSetupSelectedPositionChanged;
+                    _lastPositionSetupSelectedItem = PositionSetupMonitor.SelectedItem;
                 }
-                (DeletePositionSetupCommand as RelayCommand)?.RaiseCanExecuteChanged();
-                (AddPositionSetupPositionCommand as RelayCommand)?.RaiseCanExecuteChanged();
-                (DeletePositionSetupPositionCommand as RelayCommand)?.RaiseCanExecuteChanged();
-                (TeachPositionSetupCommand as RelayCommand)?.RaiseCanExecuteChanged();
-                (MovePositionSetupCommand as RelayCommand)?.RaiseCanExecuteChanged();
-            }
-            else if (e.PropertyName == nameof(PositionSetupMonitorViewModel.SelectedItem) + ".SelectedPosition")
-            {
-                (DeletePositionSetupPositionCommand as RelayCommand)?.RaiseCanExecuteChanged();
-                (TeachPositionSetupCommand as RelayCommand)?.RaiseCanExecuteChanged();
-                (MovePositionSetupCommand as RelayCommand)?.RaiseCanExecuteChanged();
+                else
+                {
+                    _lastPositionSetupSelectedItem = null;
+                }
+
+                RefreshPositionSetupCommands();
             }
         };
         AxisDebug = new AxisDebugViewModel(motionAppService, machine, homePlanRuntimeState, commandFeedbackRuntimeState, CanControlAxisCommands);
@@ -351,6 +323,25 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IOperationStat
         _axisConsoleCoordinator = new AxisConsoleCoordinator(AxisMonitor, AxisDebug, AxisParameterEditor);
         _ioMonitorCoordinator = new IoMonitorCoordinator(IoMonitor, (RelayCommand)DeleteInputCommand, (RelayCommand)DeleteOutputCommand);
         _ioMonitorCoordinator.Initialize();
+        _magazineCoordinator = new MagazineCoordinator(
+            MagazineMonitor,
+            RefreshMagazineCommands,
+            RefreshMagazinePositionCommands);
+        _magazineCoordinator.Initialize();
+        _workHeadCoordinator = new WorkHeadCoordinator(
+            WorkHeadMonitor,
+            RefreshWorkHeadCommands);
+        _workHeadCoordinator.Initialize();
+        _cylinderCoordinator = new CylinderCoordinator(
+            CylinderMonitor,
+            RefreshCylinderCommands);
+        _cylinderCoordinator.Initialize();
+        _positionSetupCoordinator = new PositionSetupCoordinator(
+            PositionSetupMonitor,
+            (RelayCommand)DeletePositionSetupPositionCommand,
+            (RelayCommand)TeachPositionSetupCommand,
+            (RelayCommand)MovePositionSetupCommand);
+        _positionSetupCoordinator.Initialize();
         _clockTimer = new Timer(_ => CurrentBeijingTime = GetBeijingTimeString(), null, TimeSpan.Zero, TimeSpan.FromSeconds(1));
     }
 
@@ -420,7 +411,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IOperationStat
 
     public IReadOnlyList<string> WorkHeadNames => WorkHeadMonitor.WorkHeads.Select(item => item.Name).OrderBy(item => item).ToList();
 
-    public string? SelectedWorkHeadMotionName { get => _selectedWorkHeadMotionName; set { if (_selectedWorkHeadMotionName == value) return; _selectedWorkHeadMotionName = value; OnPropertyChanged(); (MoveWorkHeadCommand as RelayCommand)?.RaiseCanExecuteChanged(); (TeachWorkHeadCommand as RelayCommand)?.RaiseCanExecuteChanged(); (AddWorkHeadPositionCommand as RelayCommand)?.RaiseCanExecuteChanged(); (DeleteWorkHeadPositionCommand as RelayCommand)?.RaiseCanExecuteChanged(); (TeachToWorkHeadPositionCommand as RelayCommand)?.RaiseCanExecuteChanged(); (MoveToWorkHeadPositionCommand as RelayCommand)?.RaiseCanExecuteChanged(); OnPropertyChanged(nameof(WorkHeadPositionNames)); SelectedWorkHeadPositionName = null; } }
+    public string? SelectedWorkHeadMotionName { get => _selectedWorkHeadMotionName; set { if (_selectedWorkHeadMotionName == value) return; _selectedWorkHeadMotionName = value; OnPropertyChanged(); OnPropertyChanged(nameof(WorkHeadPositionNames)); SelectedWorkHeadPositionName = null; RefreshWorkHeadCommands(); } }
     public double WorkHeadTargetX { get => _workHeadTargetX; set { if (_workHeadTargetX == value) return; _workHeadTargetX = value; OnPropertyChanged(); } }
     public double WorkHeadTargetY { get => _workHeadTargetY; set { if (_workHeadTargetY == value) return; _workHeadTargetY = value; OnPropertyChanged(); } }
     public double WorkHeadTargetZ { get => _workHeadTargetZ; set { if (_workHeadTargetZ == value) return; _workHeadTargetZ = value; OnPropertyChanged(); } }
@@ -429,7 +420,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IOperationStat
     public double WorkHeadMoveAcceleration { get => _workHeadMoveAcceleration; set { if (_workHeadMoveAcceleration == value) return; _workHeadMoveAcceleration = value; OnPropertyChanged(); } }
     public double WorkHeadMoveDeceleration { get => _workHeadMoveDeceleration; set { if (_workHeadMoveDeceleration == value) return; _workHeadMoveDeceleration = value; OnPropertyChanged(); } }
 
-    public string? SelectedWorkHeadPositionName { get => _selectedWorkHeadPositionName; set { if (_selectedWorkHeadPositionName == value) return; _selectedWorkHeadPositionName = value; OnPropertyChanged(); (DeleteWorkHeadPositionCommand as RelayCommand)?.RaiseCanExecuteChanged(); (TeachToWorkHeadPositionCommand as RelayCommand)?.RaiseCanExecuteChanged(); (MoveToWorkHeadPositionCommand as RelayCommand)?.RaiseCanExecuteChanged(); } }
+    public string? SelectedWorkHeadPositionName { get => _selectedWorkHeadPositionName; set { if (_selectedWorkHeadPositionName == value) return; _selectedWorkHeadPositionName = value; OnPropertyChanged(); RefreshWorkHeadCommands(); } }
 
     public IReadOnlyList<WorkHeadPosition> GetWorkHeadPositions(string workHeadName)
     {
@@ -550,20 +541,10 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IOperationStat
         (SaveIoConfigCommand as RelayCommand)?.RaiseCanExecuteChanged();
         (LoadIoConfigCommand as RelayCommand)?.RaiseCanExecuteChanged();
         (AddCylinderCommand as RelayCommand)?.RaiseCanExecuteChanged();
-        (DeleteCylinderCommand as RelayCommand)?.RaiseCanExecuteChanged();
         (SaveCylinderConfigCommand as RelayCommand)?.RaiseCanExecuteChanged();
         (LoadCylinderConfigCommand as RelayCommand)?.RaiseCanExecuteChanged();
         (AddMagazineCommand as RelayCommand)?.RaiseCanExecuteChanged();
-        (DeleteMagazineCommand as RelayCommand)?.RaiseCanExecuteChanged();
-        (SaveMagazineConfigCommand as RelayCommand)?.RaiseCanExecuteChanged();
-        (LoadMagazineConfigCommand as RelayCommand)?.RaiseCanExecuteChanged();
-        (TeachMagazinePositionCommand as RelayCommand)?.RaiseCanExecuteChanged();
-        (MoveMagazinePositionCommand as RelayCommand)?.RaiseCanExecuteChanged();
-        (ScanMagazineCommand as RelayCommand)?.RaiseCanExecuteChanged();
         (AddWorkHeadCommand as RelayCommand)?.RaiseCanExecuteChanged();
-        (DeleteWorkHeadCommand as RelayCommand)?.RaiseCanExecuteChanged();
-        (SaveWorkHeadConfigCommand as RelayCommand)?.RaiseCanExecuteChanged();
-        (LoadWorkHeadConfigCommand as RelayCommand)?.RaiseCanExecuteChanged();
         var now = DateTime.UtcNow;
 
         if (force || now - _lastDashboardRefreshUtc >= TimeSpan.FromMilliseconds(500))
@@ -629,13 +610,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IOperationStat
         {
             PositionSetupEventLog.Refresh();
             (AddPositionSetupCommand as RelayCommand)?.RaiseCanExecuteChanged();
-            (DeletePositionSetupCommand as RelayCommand)?.RaiseCanExecuteChanged();
-            (SavePositionSetupConfigCommand as RelayCommand)?.RaiseCanExecuteChanged();
-            (LoadPositionSetupConfigCommand as RelayCommand)?.RaiseCanExecuteChanged();
-            (AddPositionSetupPositionCommand as RelayCommand)?.RaiseCanExecuteChanged();
-            (DeletePositionSetupPositionCommand as RelayCommand)?.RaiseCanExecuteChanged();
-            (TeachPositionSetupCommand as RelayCommand)?.RaiseCanExecuteChanged();
-            (MovePositionSetupCommand as RelayCommand)?.RaiseCanExecuteChanged();
+            RefreshPositionSetupCommands();
             _lastPositionSetupRefreshUtc = now;
         }
     }
@@ -643,6 +618,66 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IOperationStat
     private void RaiseAxisDeleteCanExecuteChanged()
     {
         (DeleteAxisCommand as RelayCommand)?.RaiseCanExecuteChanged();
+    }
+
+    private void OnPositionSetupSelectedPositionChanged()
+    {
+        (DeletePositionSetupCommand as RelayCommand)?.RaiseCanExecuteChanged();
+        (AddPositionSetupPositionCommand as RelayCommand)?.RaiseCanExecuteChanged();
+        (DeletePositionSetupPositionCommand as RelayCommand)?.RaiseCanExecuteChanged();
+        (TeachPositionSetupCommand as RelayCommand)?.RaiseCanExecuteChanged();
+        (MovePositionSetupCommand as RelayCommand)?.RaiseCanExecuteChanged();
+    }
+
+    private void RefreshMagazineCommands()
+    {
+        (DeleteMagazineCommand as RelayCommand)?.RaiseCanExecuteChanged();
+        (AddMagazinePositionCommand as RelayCommand)?.RaiseCanExecuteChanged();
+        (DeleteMagazinePositionCommand as RelayCommand)?.RaiseCanExecuteChanged();
+        (TeachMagazinePositionCommand as RelayCommand)?.RaiseCanExecuteChanged();
+        (MoveMagazinePositionCommand as RelayCommand)?.RaiseCanExecuteChanged();
+        (ScanMagazineCommand as RelayCommand)?.RaiseCanExecuteChanged();
+        (SaveMagazineConfigCommand as RelayCommand)?.RaiseCanExecuteChanged();
+        (LoadMagazineConfigCommand as RelayCommand)?.RaiseCanExecuteChanged();
+    }
+
+    private void RefreshMagazinePositionCommands()
+    {
+        (DeleteMagazinePositionCommand as RelayCommand)?.RaiseCanExecuteChanged();
+        (TeachMagazinePositionCommand as RelayCommand)?.RaiseCanExecuteChanged();
+        (MoveMagazinePositionCommand as RelayCommand)?.RaiseCanExecuteChanged();
+        (ScanMagazineCommand as RelayCommand)?.RaiseCanExecuteChanged();
+    }
+
+    private void RefreshWorkHeadCommands()
+    {
+        (DeleteWorkHeadCommand as RelayCommand)?.RaiseCanExecuteChanged();
+        (AddWorkHeadPositionCommand as RelayCommand)?.RaiseCanExecuteChanged();
+        (DeleteWorkHeadPositionCommand as RelayCommand)?.RaiseCanExecuteChanged();
+        (SaveWorkHeadConfigCommand as RelayCommand)?.RaiseCanExecuteChanged();
+        (LoadWorkHeadConfigCommand as RelayCommand)?.RaiseCanExecuteChanged();
+        (MoveWorkHeadCommand as RelayCommand)?.RaiseCanExecuteChanged();
+        (TeachWorkHeadCommand as RelayCommand)?.RaiseCanExecuteChanged();
+        (TeachToWorkHeadPositionCommand as RelayCommand)?.RaiseCanExecuteChanged();
+        (MoveToWorkHeadPositionCommand as RelayCommand)?.RaiseCanExecuteChanged();
+    }
+
+    private void RefreshCylinderCommands()
+    {
+        (DeleteCylinderCommand as RelayCommand)?.RaiseCanExecuteChanged();
+        (SaveCylinderConfigCommand as RelayCommand)?.RaiseCanExecuteChanged();
+        (LoadCylinderConfigCommand as RelayCommand)?.RaiseCanExecuteChanged();
+    }
+
+    private void RefreshPositionSetupCommands()
+    {
+        (DeletePositionSetupCommand as RelayCommand)?.RaiseCanExecuteChanged();
+        (AddPositionSetupPositionCommand as RelayCommand)?.RaiseCanExecuteChanged();
+        (DeletePositionSetupPositionCommand as RelayCommand)?.RaiseCanExecuteChanged();
+        (TeachPositionSetupCommand as RelayCommand)?.RaiseCanExecuteChanged();
+        (MovePositionSetupCommand as RelayCommand)?.RaiseCanExecuteChanged();
+        (SavePositionSetupConfigCommand as RelayCommand)?.RaiseCanExecuteChanged();
+        (LoadPositionSetupConfigCommand as RelayCommand)?.RaiseCanExecuteChanged();
     }
 
     private async Task AddAxisAsync()

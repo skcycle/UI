@@ -101,7 +101,8 @@ public sealed class EventLogQueryService : IEventLogStore
     public void Enqueue(RuntimeEventLogEntry entry) => _eventLogStore.Enqueue(entry);
     public Task WarmupAsync(CancellationToken ct = default) => _eventLogStore.WarmupAsync(ct);
     public Task<int> DeleteOlderThanAsync(DateTime cutoffUtc, CancellationToken ct = default) => _eventLogStore.DeleteOlderThanAsync(cutoffUtc, ct);
-    public Task FlushAsync(CancellationToken ct = default) => _eventLogStore.FlushAsync(ct);
+    public Task FlushPendingAsync(CancellationToken ct = default) => _eventLogStore.FlushPendingAsync(ct);
+    public Task CompleteAndDrainAsync(CancellationToken ct = default) => _eventLogStore.CompleteAndDrainAsync(ct);
     public Task<IReadOnlyList<string>> GetDistinctModulesAsync(CancellationToken ct = default) => _eventLogStore.GetDistinctModulesAsync(ct);
     public void EnqueueTestEntry(string module, string eventType, string level, string? message = null) => _eventLogStore.EnqueueTestEntry(module, eventType, level, message);
     public Task ClearAllAsync(CancellationToken ct = default) => _eventLogStore.ClearAllAsync(ct);
